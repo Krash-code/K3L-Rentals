@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Customer Management - K3L Rentals</title>
+
+    <link rel="stylesheet" href="css/style.css">
+</head>
+
+<body>
+
+    <!-- NAVBAR -->
+    <nav class="navbar">
+
+        <div class="logo">
+            K3L RENTALS
+        </div>
+
+        <div class="nav-links">
+
+            <a href="admin-dashboard.html">
+                Dashboard
+            </a>
+
+            <a href="admin-vehicles.html">
+                Vehicles
+            </a>
+
+            <a href="admin-bookings.html">
+                Bookings
+            </a>
+
+            <a href="admin-customers.html">
+                Customers
+            </a>
+
+            <a href="admin-fleet.html">
+                Fleet
+            </a>
+
+            <a href="admin-maintenance.html">
+                Maintenance
+            </a>
+
+            <a href="admin-reports.html">
+                Reports
+            </a>
+
+            <button
+                id="logoutBtn"
+                class="logout-btn">
+                Logout
+            </button>
+
+        </div>
+
+    </nav>
+
+
+    <!-- MAIN CONTENT -->
+    <main class="section">
+
+        <div class="admin-page-header">
+
+            <div>
+                <h1>Customer Management</h1>
+
+                <p>
+                    Manage registered customers and their accounts.
+                </p>
+            </div>
+
+        </div>
+
+
+        <!-- SEARCH -->
+        <div class="admin-form-card">
+
+            <div class="form-grid">
+
+                <div class="form-group">
+
+                    <label for="searchInput">
+                        Search Customers
+                    </label>
+
+                    <input
+                        type="text"
+                        id="searchInput"
+                        placeholder="Search by name, email or phone"
+                    >
+
+                </div>
+
+            </div>
+
+        </div>
+
+
+        <!-- CUSTOMER TABLE -->
+        <div
+            id="customerTableContainer"
+            class="admin-table-container">
+
+            <div class="info-card">
+
+                <h3>
+                    Loading customers...
+                </h3>
+
+            </div>
+
+        </div>
+
+    </main>
+
+
+    <script src="js/common.js"></script>
+    <script src="js/admin-customers.js"></script>
+
+</body>
+
+</html>

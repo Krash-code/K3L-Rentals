@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <title>Maintenance Management - K3L Rentals</title>
+
+    <link
+        rel="stylesheet"
+        href="css/style.css"
+    >
+
+</head>
+
+<body>
+
+    <!-- NAVBAR -->
+
+    <nav class="navbar">
+
+        <div class="logo">
+            K3L RENTALS
+        </div>
+
+        <div class="nav-links">
+
+            <a href="admin-dashboard.html">
+                Dashboard
+            </a>
+
+            <a href="admin-vehicles.html">
+                Vehicles
+            </a>
+
+            <a href="admin-bookings.html">
+                Bookings
+            </a>
+
+            <a href="admin-customers.html">
+                Customers
+            </a>
+
+            <a href="admin-fleet.html">
+                Fleet
+            </a>
+
+            <a href="admin-maintenance.html">
+                Maintenance
+            </a>
+
+            <a href="admin-reports.html">
+                Reports
+            </a>
+
+            <button
+                id="logoutBtn"
+                class="logout-btn"
+            >
+                Logout
+            </button>
+
+        </div>
+
+    </nav>
+
+
+    <!-- MAIN -->
+
+    <main class="section">
+
+        <div class="admin-page-header">
+
+            <div>
+
+                <h1>
+                    Maintenance Management
+                </h1>
+
+                <p>
+                    Manage vehicle service and maintenance records.
+                </p>
+
+            </div>
+
+            <button
+                id="addMaintenanceBtn"
+                class="primary-btn"
+            >
+                + Add Maintenance
+            </button>
+
+        </div>
+
+
+        <!-- ADD / EDIT FORM -->
+
+        <div
+            id="maintenanceFormContainer"
+            class="admin-form-card hidden"
+        >
+
+            <h2 id="maintenanceFormTitle">
+                Add Maintenance Record
+            </h2>
+
+
+            <form id="maintenanceForm">
+
+                <input
+                    type="hidden"
+                    id="maintenanceId"
+                >
+
+
+                <div class="form-grid">
+
+
+                    <!-- VEHICLE -->
+
+                    <div class="form-group">
+
+                        <label for="vehicle_id">
+                            Vehicle
+                        </label>
+
+                        <select
+                            id="vehicle_id"
+                            required
+                        >
+
+                            <option value="">
+                                Select Vehicle
+                            </option>
+
+                        </select>
+
+                    </div>
+
+
+                    <!-- SERVICE DATE -->
+
+                    <div class="form-group">
+
+                        <label for="service_date">
+                            Service Date
+                        </label>
+
+                        <input
+                            type="date"
+                            id="service_date"
+                            required
+                        >
+
+                    </div>
+
+
+                    <!-- NEXT SERVICE DATE -->
+
+                    <div class="form-group">
+
+                        <label for="next_service_date">
+                            Next Service Date
+                        </label>
+
+                        <input
+                            type="date"
+                            id="next_service_date"
+                            required
+                        >
+
+                    </div>
+
+
+                    <!-- STATUS -->
+
+                    <div class="form-group">
+
+                        <label for="maintenance_status">
+                            Status
+                        </label>
+
+                        <select
+                            id="maintenance_status"
+                            required
+                        >
+
+                            <option value="scheduled">
+                                Scheduled
+                            </option>
+
+                            <option value="in_progress">
+                                In Progress
+                            </option>
+
+                            <option value="completed">
+                                Completed
+                            </option>
+
+                        </select>
+
+                    </div>
+
+
+                    <!-- DESCRIPTION -->
+
+                    <div class="form-group form-full">
+
+                        <label for="description">
+                            Description
+                        </label>
+
+                        <textarea
+                            id="description"
+                            rows="4"
+                            placeholder="Enter maintenance details..."
+                            required
+                        ></textarea>
+
+                    </div>
+
+                </div>
+
+
+                <div
+                    id="maintenanceFormMessage"
+                    class="form-message"
+                ></div>
+
+
+                <div class="form-buttons">
+
+                    <button
+                        type="submit"
+                        class="primary-btn"
+                    >
+                        Save Maintenance
+                    </button>
+
+                    <button
+                        type="button"
+                        id="cancelMaintenance"
+                        class="secondary-btn"
+                    >
+                        Cancel
+                    </button>
+
+                </div>
+
+            </form>
+
+        </div>
+
+
+        <!-- MAINTENANCE TABLE -->
+
+        <div
+            id="maintenanceTableContainer"
+            class="admin-table-container"
+        >
+
+            <div class="info-card">
+
+                <h3>
+                    Loading maintenance records...
+                </h3>
+
+            </div>
+
+        </div>
+
+    </main>
+
+
+    <script src="js/common.js"></script>
+
+    <script src="js/admin-maintenance.js"></script>
+
+</body>
+
+</html>

@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0">
+
+    <title>Manage Vehicles - K3L Rentals</title>
+
+    <link
+        rel="stylesheet"
+        href="css/style.css">
+
+</head>
+
+<body>
+
+<header class="navbar">
+
+    <div class="logo">
+        K3L RENTALS
+    </div>
+
+    <nav>
+
+        <a href="admin-dashboard.html">
+            Dashboard
+        </a>
+
+        <a href="admin-vehicles.html">
+            Vehicles
+        </a>
+
+        <a href="admin-bookings.html">
+            Bookings
+        </a>
+
+        <a href="admin-customers.html">
+            Customers
+        </a>
+
+        <a href="admin-fleet.html">
+            Fleet
+        </a>
+
+        <a href="admin-maintenance.html">
+            Maintenance
+        </a>
+
+        <a href="admin-reports.html">
+            Reports
+        </a>
+
+        <button
+            id="logoutBtn"
+            class="nav-btn">
+
+            Logout
+
+        </button>
+
+    </nav>
+
+</header>
+
+
+<section class="section">
+
+    <div class="admin-page-header">
+
+        <div>
+
+            <h1>
+                Manage Vehicles
+            </h1>
+
+            <p class="section-subtitle">
+                Add, edit and manage rental vehicles.
+            </p>
+
+        </div>
+
+        <button
+            id="showAddFormBtn"
+            class="primary-btn">
+
+            + Add Vehicle
+
+        </button>
+
+    </div>
+
+
+    <!-- ADD / EDIT FORM -->
+
+    <div
+        id="vehicleFormContainer"
+        class="admin-form-card hidden">
+
+        <h2 id="formTitle">
+            Add Vehicle
+        </h2>
+
+
+        <form id="vehicleForm">
+
+
+            <input
+                type="hidden"
+                id="vehicleId">
+
+
+            <div class="form-grid">
+
+
+                <div>
+
+                    <label for="vehicle_number">
+                        Vehicle Number
+                    </label>
+
+                    <input
+                        type="text"
+                        id="vehicle_number"
+                        placeholder="TN38AB1234"
+                        required>
+
+                </div>
+
+
+                <div>
+
+                    <label for="model">
+                        Model
+                    </label>
+
+                    <input
+                        type="text"
+                        id="model"
+                        placeholder="Toyota Innova"
+                        required>
+
+                </div>
+
+
+                <div>
+
+                    <label for="type">
+                        Type
+                    </label>
+
+                    <select
+                        id="type"
+                        required>
+
+                        <option value="">
+                            Select Type
+                        </option>
+
+                        <option value="SUV">
+                            SUV
+                        </option>
+
+                        <option value="Sedan">
+                            Sedan
+                        </option>
+
+                        <option value="Hatchback">
+                            Hatchback
+                        </option>
+
+                        <option value="MUV">
+                            MUV
+                        </option>
+
+                        <option value="Luxury">
+                            Luxury
+                        </option>
+
+                        <option value="Van">
+                            Van
+                        </option>
+
+                    </select>
+
+                </div>
+
+
+                <div>
+
+                    <label for="price_per_day">
+                        Price Per Day
+                    </label>
+
+                    <input
+                        type="number"
+                        id="price_per_day"
+                        min="0"
+                        step="0.01"
+                        placeholder="2500"
+                        required>
+
+                </div>
+
+
+                <div>
+
+                    <label for="location">
+                        Location
+                    </label>
+
+                    <input
+                        type="text"
+                        id="location"
+                        placeholder="Coimbatore"
+                        required>
+
+                </div>
+
+
+                <div>
+
+                    <label for="status">
+                        Status
+                    </label>
+
+                    <select id="status">
+
+                        <option value="available">
+                            Available
+                        </option>
+
+                        <option value="maintenance">
+                            Maintenance
+                        </option>
+
+                        <option value="booked">
+                            Booked
+                        </option>
+
+                        <option value="in_use">
+                            In Use
+                        </option>
+
+                    </select>
+
+                </div>
+
+
+                <div class="form-full">
+
+                    <label for="image">
+                        Image File Name
+                    </label>
+
+                    <input
+                        type="text"
+                        id="image"
+                        placeholder="innova.jpg">
+
+                    <small>
+                        Example: innova.jpg
+                    </small>
+
+                </div>
+
+
+            </div>
+
+
+            <div class="form-buttons">
+
+                <button
+                    type="submit"
+                    class="primary-btn">
+
+                    Save Vehicle
+
+                </button>
+
+
+                <button
+                    type="button"
+                    id="cancelFormBtn"
+                    class="secondary-btn">
+
+                    Cancel
+
+                </button>
+
+            </div>
+
+
+            <p id="formMessage"></p>
+
+
+        </form>
+
+    </div>
+
+
+    <!-- VEHICLE LIST -->
+
+    <div class="admin-table-container">
+
+        <h2>
+            All Vehicles
+        </h2>
+
+
+        <div id="vehicleTableContainer">
+
+            <p>
+                Loading vehicles...
+            </p>
+
+        </div>
+
+    </div>
+
+
+</section>
+
+
+<script src="js/common.js"></script>
+
+<script src="js/admin-vehicles.js"></script>
+
+</body>
+
+</html>

@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0">
+
+    <title>Vehicles - K3L Rentals</title>
+
+    <link
+        rel="stylesheet"
+        href="css/style.css">
+
+</head>
+
+
+<body>
+
+
+<header class="navbar">
+
+    <div class="logo">
+        K3L RENTALS
+    </div>
+
+
+    <nav>
+
+        <a href="index.html">
+            Home
+        </a>
+
+        <a href="vehicles.html">
+            Vehicles
+        </a>
+
+        <a
+            href="my-bookings.html"
+            id="bookingsLink"
+            class="hidden">
+
+            My Bookings
+
+        </a>
+
+        <a
+            href="login.html"
+            id="loginLink">
+
+            Login
+
+        </a>
+
+        <a
+            href="register.html"
+            id="registerLink">
+
+            Register
+
+        </a>
+
+        <button
+            id="logoutBtn"
+            class="nav-btn hidden">
+
+            Logout
+
+        </button>
+
+    </nav>
+
+</header>
+
+
+
+<section class="section">
+
+    <h1>
+        Available Vehicles
+    </h1>
+
+    <p class="section-subtitle">
+        Choose a vehicle for your journey.
+    </p>
+
+
+    <div class="filter-bar">
+
+        <input
+            type="text"
+            id="searchInput"
+            placeholder="Search vehicles...">
+
+
+        <select id="typeFilter">
+
+            <option value="all">
+                All Types
+            </option>
+
+        </select>
+
+    </div>
+
+
+    <div
+        id="vehicleContainer"
+        class="vehicle-grid">
+
+        <p>
+            Loading vehicles...
+        </p>
+
+    </div>
+
+</section>
+
+
+
+<script src="js/common.js"></script>
+
+<script src="js/vehicles.js"></script>
+
+
+</body>
+
+</html>

@@ -1,0 +1,377 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0">
+
+    <title>Admin Dashboard - K3L Rentals</title>
+
+    <link
+        rel="stylesheet"
+        href="css/style.css">
+
+</head>
+
+
+<body>
+
+
+<header class="navbar">
+
+    <div class="logo">
+        K3L RENTALS
+    </div>
+
+
+    <nav>
+
+        <a href="admin-dashboard.html">
+            Dashboard
+        </a>
+
+        <a href="admin-vehicles.html">
+            Vehicles
+        </a>
+
+        <a href="admin-bookings.html">
+            Bookings
+        </a>
+
+        <a href="admin-customers.html">
+            Customers
+        </a>
+
+        <a href="admin-fleet.html">
+            Fleet
+        </a>
+
+        <a href="admin-maintenance.html">
+            Maintenance
+        </a>
+
+        <a href="admin-reports.html">
+            Reports
+        </a>
+
+        <button
+            id="logoutBtn"
+            class="nav-btn">
+
+            Logout
+
+        </button>
+
+    </nav>
+
+</header>
+
+
+
+<section class="section">
+
+
+    <h1>
+        Admin Dashboard
+    </h1>
+
+
+    <p class="section-subtitle">
+        K3L Rentals management overview
+    </p>
+
+
+
+    <div class="dashboard-grid">
+
+
+        <!-- Total Vehicles -->
+
+        <div class="dashboard-card">
+
+            <h3>
+                Total Vehicles
+            </h3>
+
+            <p
+                id="totalVehicles"
+                class="dashboard-number">
+
+                --
+
+            </p>
+
+        </div>
+
+
+
+        <!-- Available -->
+
+        <div class="dashboard-card">
+
+            <h3>
+                Available
+            </h3>
+
+            <p
+                id="available"
+                class="dashboard-number">
+
+                --
+
+            </p>
+
+        </div>
+
+
+
+        <!-- Booked -->
+
+        <div class="dashboard-card">
+
+            <h3>
+                Booked
+            </h3>
+
+            <p
+                id="booked"
+                class="dashboard-number">
+
+                --
+
+            </p>
+
+        </div>
+
+
+
+        <!-- Maintenance -->
+
+        <div class="dashboard-card">
+
+            <h3>
+                Maintenance
+            </h3>
+
+            <p
+                id="maintenance"
+                class="dashboard-number">
+
+                --
+
+            </p>
+
+        </div>
+
+
+
+        <!-- In Use -->
+
+        <div class="dashboard-card">
+
+            <h3>
+                In Use
+            </h3>
+
+            <p
+                id="inUse"
+                class="dashboard-number">
+
+                --
+
+            </p>
+
+        </div>
+
+
+
+        <!-- Bookings -->
+
+        <div class="dashboard-card">
+
+            <h3>
+                Total Bookings
+            </h3>
+
+            <p
+                id="totalBookings"
+                class="dashboard-number">
+
+                --
+
+            </p>
+
+        </div>
+
+
+
+        <!-- Customers -->
+
+        <div class="dashboard-card">
+
+            <h3>
+                Customers
+            </h3>
+
+            <p
+                id="totalCustomers"
+                class="dashboard-number">
+
+                --
+
+            </p>
+
+        </div>
+
+
+
+        <!-- Revenue -->
+
+        <div class="dashboard-card">
+
+            <h3>
+                Total Revenue
+            </h3>
+
+            <p
+                id="totalRevenue"
+                class="dashboard-number">
+
+                ₹--
+
+            </p>
+
+        </div>
+
+
+    </div>
+
+
+
+    <div class="admin-actions">
+
+
+        <h2>
+            Management
+        </h2>
+
+
+        <div class="admin-action-grid">
+
+
+            <a
+                href="admin-vehicles.html"
+                class="admin-action-card">
+
+                <h3>
+                    Vehicles
+                </h3>
+
+                <p>
+                    Add, edit and delete vehicles.
+                </p>
+
+            </a>
+
+
+
+            <a
+                href="admin-bookings.html"
+                class="admin-action-card">
+
+                <h3>
+                    Bookings
+                </h3>
+
+                <p>
+                    View and manage bookings.
+                </p>
+
+            </a>
+
+
+
+            <a
+                href="admin-customers.html"
+                class="admin-action-card">
+
+                <h3>
+                    Customers
+                </h3>
+
+                <p>
+                    View registered customers.
+                </p>
+
+            </a>
+
+
+
+            <a
+                href="admin-fleet.html"
+                class="admin-action-card">
+
+                <h3>
+                    Fleet
+                </h3>
+
+                <p>
+                    Manage vehicle status and location.
+                </p>
+
+            </a>
+
+
+
+            <a
+                href="admin-maintenance.html"
+                class="admin-action-card">
+
+                <h3>
+                    Maintenance
+                </h3>
+
+                <p>
+                    Manage vehicle servicing.
+                </p>
+
+            </a>
+
+
+
+            <a
+                href="admin-reports.html"
+                class="admin-action-card">
+
+                <h3>
+                    Reports
+                </h3>
+
+                <p>
+                    View system reports.
+                </p>
+
+            </a>
+
+
+        </div>
+
+    </div>
+
+
+</section>
+
+
+
+<script src="js/common.js"></script>
+
+<script src="js/admin-dashboard.js"></script>
+
+
+</body>
+
+</html>

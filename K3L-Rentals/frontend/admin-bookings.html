@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0">
+
+    <title>Manage Bookings - K3L Rentals</title>
+
+    <link
+        rel="stylesheet"
+        href="css/style.css">
+
+</head>
+
+<body>
+
+<header class="navbar">
+
+    <div class="logo">
+        K3L RENTALS
+    </div>
+
+    <nav>
+
+        <a href="admin-dashboard.html">
+            Dashboard
+        </a>
+
+        <a href="admin-vehicles.html">
+            Vehicles
+        </a>
+
+        <a href="admin-bookings.html">
+            Bookings
+        </a>
+
+        <a href="admin-customers.html">
+            Customers
+        </a>
+
+        <a href="admin-fleet.html">
+            Fleet
+        </a>
+
+        <a href="admin-maintenance.html">
+            Maintenance
+        </a>
+
+        <a href="admin-reports.html">
+            Reports
+        </a>
+
+        <button
+            id="logoutBtn"
+            class="nav-btn">
+
+            Logout
+
+        </button>
+
+    </nav>
+
+</header>
+
+
+<section class="section">
+
+    <div class="admin-page-header">
+
+        <div>
+
+            <h1>
+                Manage Bookings
+            </h1>
+
+            <p class="section-subtitle">
+                View and manage customer bookings.
+            </p>
+
+        </div>
+
+    </div>
+
+
+    <!-- EDIT BOOKING FORM -->
+
+    <div
+        id="bookingFormContainer"
+        class="admin-form-card hidden">
+
+        <h2>
+            Edit Booking
+        </h2>
+
+
+        <form id="bookingForm">
+
+            <input
+                type="hidden"
+                id="bookingId">
+
+
+            <div class="form-grid">
+
+
+                <div>
+
+                    <label for="start_date">
+                        Start Date
+                    </label>
+
+                    <input
+                        type="date"
+                        id="start_date"
+                        required>
+
+                </div>
+
+
+                <div>
+
+                    <label for="end_date">
+                        End Date
+                    </label>
+
+                    <input
+                        type="date"
+                        id="end_date"
+                        required>
+
+                </div>
+
+
+                <div>
+
+                    <label for="booking_status">
+                        Status
+                    </label>
+
+                    <select
+                        id="booking_status"
+                        required>
+
+                        <option value="confirmed">
+                            Confirmed
+                        </option>
+
+                        <option value="pending">
+                            Pending
+                        </option>
+
+                        <option value="cancelled">
+                            Cancelled
+                        </option>
+
+                    </select>
+
+                </div>
+
+
+            </div>
+
+
+            <div class="form-buttons">
+
+                <button
+                    type="submit"
+                    class="primary-btn">
+
+                    Update Booking
+
+                </button>
+
+
+                <button
+                    type="button"
+                    id="cancelBookingEdit"
+                    class="secondary-btn">
+
+                    Cancel
+
+                </button>
+
+            </div>
+
+
+            <p id="bookingFormMessage"></p>
+
+        </form>
+
+    </div>
+
+
+    <!-- BOOKINGS TABLE -->
+
+    <div class="admin-table-container">
+
+        <h2>
+            All Bookings
+        </h2>
+
+
+        <div id="bookingTableContainer">
+
+            <p>
+                Loading bookings...
+            </p>
+
+        </div>
+
+    </div>
+
+
+</section>
+
+
+<script src="js/common.js"></script>
+
+<script src="js/admin-bookings.js"></script>
+
+</body>
+
+</html>

@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <title>Fleet Management - K3L Rentals</title>
+
+    <link
+        rel="stylesheet"
+        href="css/style.css"
+    >
+</head>
+
+<body>
+
+    <!-- NAVBAR -->
+    <nav class="navbar">
+
+        <div class="logo">
+            K3L RENTALS
+        </div>
+
+        <div class="nav-links">
+
+            <a href="admin-dashboard.html">
+                Dashboard
+            </a>
+
+            <a href="admin-vehicles.html">
+                Vehicles
+            </a>
+
+            <a href="admin-bookings.html">
+                Bookings
+            </a>
+
+            <a href="admin-customers.html">
+                Customers
+            </a>
+
+            <a href="admin-fleet.html">
+                Fleet
+            </a>
+
+            <a href="admin-maintenance.html">
+                Maintenance
+            </a>
+
+            <a href="admin-reports.html">
+                Reports
+            </a>
+
+            <button
+                id="logoutBtn"
+                class="logout-btn"
+            >
+                Logout
+            </button>
+
+        </div>
+
+    </nav>
+
+
+    <!-- MAIN -->
+    <main class="section">
+
+    <!-- PAGE HEADER -->
+
+    <div class="admin-page-header">
+
+        <div>
+
+            <h1>
+                Fleet Management
+            </h1>
+
+            <p>
+                Monitor vehicle status and location.
+            </p>
+
+        </div>
+
+        <button
+            id="refreshFleetBtn"
+            class="primary-btn"
+        >
+            Refresh Fleet
+        </button>
+
+    </div>
+
+
+    <!-- FLEET FILTERS -->
+
+    <div class="admin-form-card">
+
+        <div class="form-grid">
+
+            <!-- SEARCH -->
+
+            <div class="form-group">
+
+                <label for="searchInput">
+                    Search Vehicle
+                </label>
+
+                <input
+                    type="text"
+                    id="searchInput"
+                    placeholder="Search model or vehicle number"
+                >
+
+            </div>
+
+
+            <!-- STATUS FILTER -->
+
+            <div class="form-group">
+
+                <label for="statusFilter">
+                    Status
+                </label>
+
+                <select id="statusFilter">
+
+                    <option value="all">
+                        All Statuses
+                    </option>
+
+                    <option value="available">
+                        Available
+                    </option>
+
+                    <option value="booked">
+                        Booked
+                    </option>
+
+                    <option value="in_use">
+                        In Use
+                    </option>
+
+                    <option value="maintenance">
+                        Maintenance
+                    </option>
+
+                </select>
+
+            </div>
+
+
+            <!-- LOCATION FILTER -->
+
+            <div class="form-group">
+
+                <label for="locationFilter">
+                    Location
+                </label>
+
+                <select id="locationFilter">
+
+                    <option value="all">
+                        All Locations
+                    </option>
+
+                </select>
+
+            </div>
+
+        </div>
+
+    </div>
+
+    <div id="fleetTableContainer" class="admin-table-container"></div>
+
+    <!-- FLEET TABLE -->
+
+    <div
+        id="fleetTableContainer"
+        class="admin-table-container"
+    >
+
+        <div class="info-card">
+
+            <h3>
+                Loading fleet...
+            </h3>
+
+        </div>
+
+    </div>
+
+</main>
+
+    <script src="js/common.js"></script>
+
+    <script src="js/admin-fleet.js"></script>
+
+</body>
+
+</html>

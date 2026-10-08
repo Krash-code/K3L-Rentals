@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0">
+
+    <title>
+        Book Vehicle - K3L Rentals
+    </title>
+
+    <link
+        rel="stylesheet"
+        href="css/style.css">
+
+</head>
+
+
+<body>
+
+
+<header class="navbar">
+
+    <div class="logo">
+        K3L RENTALS
+    </div>
+
+
+    <nav>
+
+        <a href="index.html">
+            Home
+        </a>
+
+        <a href="vehicles.html">
+            Vehicles
+        </a>
+
+        <a
+            href="my-bookings.html"
+            id="bookingsLink">
+
+            My Bookings
+
+        </a>
+
+        <button
+            id="logoutBtn"
+            class="nav-btn">
+
+            Logout
+
+        </button>
+
+    </nav>
+
+</header>
+
+
+
+<div class="booking-container">
+
+    <div class="booking-card">
+
+
+        <h1>
+            Book Your Vehicle
+        </h1>
+
+
+        <div id="vehicleSummary">
+
+            <p>
+                Loading vehicle...
+            </p>
+
+        </div>
+
+
+
+        <form id="bookingForm">
+
+
+            <label for="start_date">
+                Start Date
+            </label>
+
+            <input
+                type="date"
+                id="start_date"
+                required>
+
+
+
+            <label for="end_date">
+                End Date
+            </label>
+
+            <input
+                type="date"
+                id="end_date"
+                required>
+
+
+
+            <button
+                type="submit"
+                class="primary-btn">
+
+                Confirm Booking
+
+            </button>
+
+
+        </form>
+
+
+        <div id="bookingMessage"></div>
+
+
+    </div>
+
+</div>
+
+
+
+<script src="js/common.js"></script>
+
+<script src="js/booking.js"></script>
+
+
+</body>
+
+</html>

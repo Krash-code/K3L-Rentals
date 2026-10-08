@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <title>Reports - K3L Rentals</title>
+
+    <link
+        rel="stylesheet"
+        href="css/style.css"
+    >
+
+</head>
+
+
+<body>
+
+
+    <!-- NAVBAR -->
+
+    <nav class="navbar">
+
+        <div class="logo">
+            K3L RENTALS
+        </div>
+
+
+        <div class="nav-links">
+
+            <a href="admin-dashboard.html">
+                Dashboard
+            </a>
+
+            <a href="admin-vehicles.html">
+                Vehicles
+            </a>
+
+            <a href="admin-bookings.html">
+                Bookings
+            </a>
+
+            <a href="admin-customers.html">
+                Customers
+            </a>
+
+            <a href="admin-fleet.html">
+                Fleet
+            </a>
+
+            <a href="admin-maintenance.html">
+                Maintenance
+            </a>
+
+            <a href="admin-reports.html">
+                Reports
+            </a>
+
+            <button
+                id="logoutBtn"
+                class="logout-btn"
+            >
+                Logout
+            </button>
+
+        </div>
+
+    </nav>
+
+
+    <!-- MAIN -->
+
+    <main class="section report-page">
+
+
+        <!-- HEADER -->
+
+        <div class="admin-page-header">
+
+            <div>
+
+                <h1>
+                    Reports & Analytics
+                </h1>
+
+                <p>
+                    Overview of rental operations and performance.
+                </p>
+
+            </div>
+
+
+            <button
+                id="printReportBtn"
+                class="primary-btn"
+            >
+                🖨 Print Report
+            </button>
+
+        </div>
+
+
+        <!-- REPORT CONTENT -->
+
+        <div id="reportContent">
+
+
+            <!-- SUMMARY CARDS -->
+
+            <div class="dashboard-grid">
+
+
+                <div class="dashboard-card">
+
+                    <h3>
+                        Total Vehicles
+                    </h3>
+
+                    <p
+                        id="totalVehicles"
+                        class="dashboard-number"
+                    >
+                        -
+                    </p>
+
+                </div>
+
+
+                <div class="dashboard-card">
+
+                    <h3>
+                        Total Customers
+                    </h3>
+
+                    <p
+                        id="totalCustomers"
+                        class="dashboard-number"
+                    >
+                        -
+                    </p>
+
+                </div>
+
+
+                <div class="dashboard-card">
+
+                    <h3>
+                        Total Bookings
+                    </h3>
+
+                    <p
+                        id="totalBookings"
+                        class="dashboard-number"
+                    >
+                        -
+                    </p>
+
+                </div>
+
+
+                <div class="dashboard-card">
+
+                    <h3>
+                        Total Revenue
+                    </h3>
+
+                    <p
+                        id="totalRevenue"
+                        class="dashboard-number"
+                    >
+                        ₹0
+                    </p>
+
+                </div>
+
+
+                <div class="dashboard-card">
+
+                    <h3>
+                        Total Maintenance
+                    </h3>
+
+                    <p
+                        id="totalMaintenance"
+                        class="dashboard-number"
+                    >
+                        -
+                    </p>
+
+                </div>
+
+
+                <div class="dashboard-card">
+
+                    <h3>
+                        Completed Maintenance
+                    </h3>
+
+                    <p
+                        id="completedMaintenance"
+                        class="dashboard-number"
+                    >
+                        -
+                    </p>
+
+                </div>
+
+
+                <div class="dashboard-card">
+
+                    <h3>
+                        Pending Maintenance
+                    </h3>
+
+                    <p
+                        id="pendingMaintenance"
+                        class="dashboard-number"
+                    >
+                        -
+                    </p>
+
+                </div>
+
+            </div>
+
+
+            <!-- BOOKING STATUS -->
+
+            <section class="report-section">
+
+                <h2>
+                    Booking Status
+                </h2>
+
+
+                <div
+                    id="bookingStatusContainer"
+                    class="report-table-container"
+                >
+                </div>
+
+            </section>
+
+
+            <!-- VEHICLE STATUS -->
+
+            <section class="report-section">
+
+                <h2>
+                    Vehicle Status
+                </h2>
+
+
+                <div
+                    id="vehicleStatusContainer"
+                    class="report-table-container"
+                >
+                </div>
+
+            </section>
+
+
+            <!-- MONTHLY REVENUE -->
+
+            <section class="report-section">
+
+                <h2>
+                    Monthly Revenue
+                </h2>
+
+
+                <div
+                    id="monthlyRevenueContainer"
+                    class="report-table-container"
+                >
+                </div>
+
+            </section>
+
+
+            <!-- POPULAR VEHICLES -->
+
+            <section class="report-section">
+
+                <h2>
+                    Most Booked Vehicles
+                </h2>
+
+
+                <div
+                    id="popularVehiclesContainer"
+                    class="report-table-container"
+                >
+                </div>
+
+            </section>
+
+
+        </div>
+
+    </main>
+
+
+    <script src="js/common.js"></script>
+
+    <script src="js/admin-reports.js"></script>
+
+
+</body>
+
+</html>
