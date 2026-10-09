@@ -1,2 +1,7 @@
 .env
 node_modules/
+
+# Firebase generated files
+.firebase/
+.agents/
+skills-lock.json
