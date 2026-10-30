@@ -1,802 +1,535 @@
-const token = getToken();
-const user = getUser();
+
+const db = firebase.firestore();
+const auth = firebase.auth();
 
 
-// ADMIN ACCESS CHECK
+// =====================================
+// ELEMENTS
+// =====================================
 
-if (
-    !token ||
-    !user ||
-    user.role !== "admin"
-) {
-    window.location.href =
-        "admin-login.html";
+const formContainer = document.getElementById("maintenanceFormContainer");
+const form = document.getElementById("maintenanceForm");
+const formTitle = document.getElementById("maintenanceFormTitle");
+const formMessage = document.getElementById("maintenanceFormMessage");
+
+const maintenanceTableContainer = document.getElementById(
+    "maintenanceTableContainer"
+);
+
+const vehicleSelect = document.getElementById("vehicle_id");
+
+
+// =====================================
+// HTML SAFETY
+// =====================================
+
+function escapeHTML(value) {
+    return String(value ?? "").replace(/[&<>"']/g, char => ({
+        "&": "&amp;",
+        "<": "&lt;",
+        ">": "&gt;",
+        '"': "&quot;",
+        "'": "&#39;"
+    })[char]);
 }
 
 
-// ELEMENTS
+// =====================================
+// DATE FORMAT
+// =====================================
 
-const formContainer =
-    document.getElementById(
-        "maintenanceFormContainer"
-    );
+function formatDate(date) {
+    if (!date) return "";
 
-const form =
-    document.getElementById(
-        "maintenanceForm"
-    );
+    if (date.toDate && typeof date.toDate === "function") {
+        date = date.toDate();
+    }
 
-const formTitle =
-    document.getElementById(
-        "maintenanceFormTitle"
-    );
+    if (date instanceof Date) {
+        return date.toISOString().split("T")[0];
+    }
 
-const formMessage =
-    document.getElementById(
-        "maintenanceFormMessage"
-    );
+    return String(date).split("T")[0];
+}
 
 
+// =====================================
+// STATUS FORMAT
+// =====================================
+
+function formatStatus(status) {
+    if (!status) return "Unknown";
+
+    return String(status)
+        .replace(/_/g, " ")
+        .replace(/\b\w/g, letter => letter.toUpperCase());
+}
+
+
+// =====================================
+// ADMIN ACCESS CHECK
+// =====================================
+
+async function checkAdminAccess(user) {
+    if (!user) {
+        window.location.href = "admin-login.html";
+        return false;
+    }
+
+    try {
+        const adminDoc = await db
+            .collection("admins")
+            .doc(user.uid)
+            .get();
+
+        if (!adminDoc.exists) {
+            await auth.signOut();
+            localStorage.removeItem("user");
+
+            alert("You do not have admin access.");
+            window.location.href = "admin-login.html";
+            return false;
+        }
+
+        return true;
+
+    } catch (error) {
+        console.error("Admin verification error:", error);
+
+        maintenanceTableContainer.innerHTML = `
+            <div class="info-card">
+                <h3>Unable to verify admin access.</h3>
+                <p>Check Firestore permissions.</p>
+            </div>
+        `;
+
+        return false;
+    }
+}
+
+
+// =====================================
 // LOGOUT
+// =====================================
 
-document
-    .getElementById("logoutBtn")
-    .addEventListener(
-        "click",
-        logout
-    );
+const logoutBtn = document.getElementById("logoutBtn");
 
-
-// ADD BUTTON
-
-document
-    .getElementById("addMaintenanceBtn")
-    .addEventListener(
-        "click",
-        openAddForm
-    );
+if (logoutBtn) {
+    logoutBtn.addEventListener("click", logout);
+}
 
 
-// CANCEL BUTTON
-
-document
-    .getElementById("cancelMaintenance")
-    .addEventListener(
-        "click",
-        closeForm
-    );
-
-
+// =====================================
 // OPEN ADD FORM
+// =====================================
 
 function openAddForm() {
-
     form.reset();
 
-    document.getElementById(
-        "maintenanceId"
-    ).value = "";
+    document.getElementById("maintenanceId").value = "";
 
-    formTitle.textContent =
-        "Add Maintenance Record";
-
+    formTitle.textContent = "Add Maintenance Record";
     formMessage.textContent = "";
 
-    formContainer.classList.remove(
-        "hidden"
-    );
+    formContainer.classList.remove("hidden");
 
     loadVehicles();
-
 }
 
 
+document.getElementById("addMaintenanceBtn")
+    .addEventListener("click", openAddForm);
+
+
+// =====================================
 // CLOSE FORM
+// =====================================
 
 function closeForm() {
-
-    formContainer.classList.add(
-        "hidden"
-    );
-
+    formContainer.classList.add("hidden");
     form.reset();
 
+    document.getElementById("maintenanceId").value = "";
     formMessage.textContent = "";
-
 }
 
 
+document.getElementById("cancelMaintenance")
+    .addEventListener("click", closeForm);
+
+
+// =====================================
 // LOAD VEHICLES
+// =====================================
 
-async function loadVehicles(
-    selectedVehicleId = null
-) {
-
+async function loadVehicles(selectedVehicleId = "") {
     try {
+        const snapshot = await db
+            .collection("vehicles")
+            .get();
 
-        const response =
-            await fetch(
-                `${API_URL}/vehicles`
-            );
-
-
-        const vehicles =
-            await response.json();
-
-
-        if (!response.ok) {
-
-            throw new Error(
-                "Failed to load vehicles"
-            );
-
-        }
-
-
-        const select =
-            document.getElementById(
-                "vehicle_id"
-            );
-
-
-        select.innerHTML = `
-            <option value="">
-                Select Vehicle
-            </option>
+        vehicleSelect.innerHTML = `
+            <option value="">Select Vehicle</option>
         `;
 
+        snapshot.forEach(doc => {
+            const vehicle = doc.data();
 
-        vehicles.forEach(
-            vehicle => {
+            const option = document.createElement("option");
 
-                const option =
-                    document.createElement(
-                        "option"
-                    );
+            option.value = doc.id;
 
-                option.value =
-                    vehicle.id;
+            const category = String(
+                vehicle.category || "car"
+            ).toLowerCase();
 
-                option.textContent =
-                    `${vehicle.vehicle_number} - ${vehicle.model}`;
+            const icon = category === "bike" ? "🏍️" : "🚗";
 
-                if (
-                    selectedVehicleId &&
-                    Number(vehicle.id) ===
-                    Number(selectedVehicleId)
-                ) {
-                    option.selected = true;
-                }
+            option.textContent =
+                `${icon} ${vehicle.vehicle_number || "N/A"} - ${vehicle.model || "Vehicle"}`;
 
-                select.appendChild(
-                    option
-                );
-
+            if (doc.id === selectedVehicleId) {
+                option.selected = true;
             }
-        );
 
+            vehicleSelect.appendChild(option);
+        });
 
     } catch (error) {
-
-        console.error(error);
-
-        alert(
-            "Unable to load vehicles."
-        );
-
+        console.error("Vehicle loading error:", error);
+        alert("Unable to load vehicles. Check Firestore permissions.");
     }
-
 }
 
 
+// =====================================
 // LOAD MAINTENANCE
+// =====================================
 
 async function loadMaintenance() {
-
     try {
+        const snapshot = await db
+            .collection("maintenance")
+            .get();
 
-        const response =
-            await fetch(
-                `${API_URL}/maintenance`,
-                {
-                    method: "GET",
+        const records = snapshot.docs.map(doc => ({
+            id: doc.id,
+            ...doc.data()
+        }));
 
-                    headers: {
-                        "Authorization":
-                            `Bearer ${token}`
-                    }
-                }
-            );
+        // Get vehicle details for displaying maintenance records
+        const vehicleSnapshot = await db
+            .collection("vehicles")
+            .get();
 
+        const vehicleMap = {};
 
-        const data =
-            await response.json();
+        vehicleSnapshot.forEach(doc => {
+            vehicleMap[doc.id] = doc.data();
+        });
 
+        records.forEach(record => {
+            const vehicle = vehicleMap[record.vehicleId];
 
-        if (!response.ok) {
+            if (vehicle) {
+                record.vehicle_number = vehicle.vehicle_number || "N/A";
+                record.model = vehicle.model || "Vehicle";
+                record.category = vehicle.category || "car";
+            }
+        });
 
-            throw new Error(
-                data.message ||
-                "Failed to fetch maintenance"
-            );
-
-        }
-
-
-        displayMaintenance(data);
-
+        displayMaintenance(records);
 
     } catch (error) {
+        console.error("Maintenance loading error:", error);
 
-        console.error(error);
-
-        document
-            .getElementById(
-                "maintenanceTableContainer"
-            )
-            .innerHTML = `
-
-                <div class="info-card">
-
-                    <h3>
-                        Unable to load maintenance records.
-                    </h3>
-
-                    <p>
-                        ${error.message}
-                    </p>
-
-                </div>
-
-            `;
-
+        maintenanceTableContainer.innerHTML = `
+            <div class="info-card">
+                <h3>Unable to load maintenance records.</h3>
+                <p>${escapeHTML(error.message)}</p>
+            </div>
+        `;
     }
-
 }
 
 
+// =====================================
 // DISPLAY MAINTENANCE
+// =====================================
 
-function displayMaintenance(
-    records
-) {
-
-    const container =
-        document.getElementById(
-            "maintenanceTableContainer"
-        );
-
-
+function displayMaintenance(records) {
     if (records.length === 0) {
-
-        container.innerHTML = `
-
+        maintenanceTableContainer.innerHTML = `
             <div class="info-card">
-
-                <h3>
-                    No maintenance records found.
-                </h3>
-
-                <p>
-                    Add a maintenance record to get started.
-                </p>
-
+                <h3>No maintenance records found.</h3>
+                <p>Add a maintenance record to get started.</p>
             </div>
-
         `;
-
         return;
     }
 
-
-    container.innerHTML = `
-
+    maintenanceTableContainer.innerHTML = `
         <div class="admin-table-wrapper">
-
             <table class="admin-table">
-
                 <thead>
-
                     <tr>
-
                         <th>ID</th>
-
                         <th>Vehicle</th>
-
                         <th>Service Date</th>
-
                         <th>Next Service</th>
-
                         <th>Description</th>
-
                         <th>Status</th>
-
                         <th>Actions</th>
-
                     </tr>
-
                 </thead>
 
-
                 <tbody>
-
-                    ${records.map(
-                        record => `
-
+                    ${records.map(record => `
                         <tr>
+                            <td>${escapeHTML(record.id)}</td>
 
                             <td>
-                                ${record.id}
-                            </td>
-
-
-                            <td>
-
                                 <strong>
-                                    ${record.vehicle_number}
+                                    ${escapeHTML(record.vehicle_number || "N/A")}
                                 </strong>
-
                                 <br>
-
-                                ${record.model}
-
+                                ${escapeHTML(record.model || "N/A")}
+                                <br>
+                                ${String(record.category).toLowerCase() === "bike"
+                                    ? "🏍️ Bike"
+                                    : "🚗 Car"}
                             </td>
 
+                            <td>${escapeHTML(formatDate(record.service_date))}</td>
+
+                            <td>${escapeHTML(formatDate(record.next_service_date))}</td>
+
+                            <td>${escapeHTML(record.description || "N/A")}</td>
 
                             <td>
-                                ${formatDate(
-                                    record.service_date
-                                )}
-                            </td>
-
-
-                            <td>
-                                ${formatDate(
-                                    record.next_service_date
-                                )}
-                            </td>
-
-
-                            <td>
-                                ${record.description || "N/A"}
-                            </td>
-
-
-                            <td>
-
-                                <span
-                                    class="admin-status ${record.status}"
-                                >
-                                    ${formatStatus(
-                                        record.status
-                                    )}
+                                <span class="admin-status">
+                                    ${escapeHTML(formatStatus(record.status))}
                                 </span>
-
                             </td>
 
-
                             <td>
-
                                 <button
                                     class="table-btn edit-btn"
-                                    onclick="editMaintenance(
-                                        ${record.id}
-                                    )"
-                                >
+                                    data-id="${escapeHTML(record.id)}">
                                     Edit
                                 </button>
-
                             </td>
-
                         </tr>
-
-                    `
-                    ).join("")}
-
+                    `).join("")}
                 </tbody>
-
             </table>
-
         </div>
-
     `;
 
+    maintenanceTableContainer
+        .querySelectorAll("button[data-id]")
+        .forEach(button => {
+            button.addEventListener("click", function () {
+                editMaintenance(this.dataset.id);
+            });
+        });
 }
 
 
+// =====================================
 // EDIT MAINTENANCE
+// =====================================
 
-async function editMaintenance(
-    id
-) {
-
+async function editMaintenance(id) {
     try {
+        const doc = await db
+            .collection("maintenance")
+            .doc(id)
+            .get();
 
-        const response =
-            await fetch(
-                `${API_URL}/maintenance`,
-                {
-                    method: "GET",
-
-                    headers: {
-                        "Authorization":
-                            `Bearer ${token}`
-                    }
-                }
-            );
-
-
-        const records =
-            await response.json();
-
-
-        if (!response.ok) {
-
-            alert(
-                "Unable to load maintenance record."
-            );
-
+        if (!doc.exists) {
+            alert("Maintenance record not found.");
             return;
         }
 
+        const record = doc.data();
 
-        const record =
-            records.find(
-                item =>
-                    Number(item.id) ===
-                    Number(id)
-            );
+        document.getElementById("maintenanceId").value = doc.id;
 
+        formTitle.textContent = "Edit Maintenance Record";
 
-        if (!record) {
+        await loadVehicles(record.vehicleId || "");
 
-            alert(
-                "Maintenance record not found."
-            );
+        document.getElementById("service_date").value =
+            formatDate(record.service_date);
 
-            return;
-        }
+        document.getElementById("next_service_date").value =
+            formatDate(record.next_service_date);
 
-
-        document.getElementById(
-            "maintenanceId"
-        ).value = record.id;
-
-
-        formTitle.textContent =
-            "Edit Maintenance Record";
-
-
-        await loadVehicles(
-            record.vehicle_id
-        );
-
-
-        document.getElementById(
-            "service_date"
-        ).value =
-            formatDate(
-                record.service_date
-            );
-
-
-        document.getElementById(
-            "next_service_date"
-        ).value =
-            formatDate(
-                record.next_service_date
-            );
-
-
-        document.getElementById(
-            "description"
-        ).value =
+        document.getElementById("description").value =
             record.description || "";
 
-
-        document.getElementById(
-            "maintenance_status"
-        ).value =
+        document.getElementById("maintenance_status").value =
             record.status || "scheduled";
-
 
         formMessage.textContent = "";
 
-
-        formContainer.classList.remove(
-            "hidden"
-        );
-
+        formContainer.classList.remove("hidden");
 
         window.scrollTo({
             top: 0,
             behavior: "smooth"
         });
 
-
     } catch (error) {
-
-        console.error(error);
-
-        alert(
-            "Unable to load maintenance record."
-        );
-
+        console.error("Edit maintenance error:", error);
+        alert("Unable to load maintenance record.");
     }
-
 }
 
 
+// =====================================
 // SUBMIT FORM
+// =====================================
 
-form.addEventListener(
-    "submit",
-    async function (event) {
+form.addEventListener("submit", async function (event) {
+    event.preventDefault();
 
-        event.preventDefault();
+    const id = document.getElementById("maintenanceId").value;
 
+    const vehicleId = vehicleSelect.value;
 
-        const id =
-            document.getElementById(
-                "maintenanceId"
-            ).value;
+    const serviceDate = document.getElementById("service_date").value;
 
+    const nextServiceDate = document.getElementById("next_service_date").value;
 
-        const vehicleId =
-            document.getElementById(
-                "vehicle_id"
-            ).value;
+    const description = document.getElementById("description").value.trim();
 
+    const status = document.getElementById("maintenance_status").value;
 
-        const serviceDate =
-            document.getElementById(
-                "service_date"
-            ).value;
+    if (!vehicleId) {
+        formMessage.textContent = "Please select a vehicle.";
+        formMessage.style.color = "red";
+        return;
+    }
 
+    if (!serviceDate) {
+        formMessage.textContent = "Please select a service date.";
+        formMessage.style.color = "red";
+        return;
+    }
 
-        const nextServiceDate =
-            document.getElementById(
-                "next_service_date"
-            ).value;
+    if (nextServiceDate && nextServiceDate < serviceDate) {
+        formMessage.textContent =
+            "Next service date cannot be before service date.";
 
+        formMessage.style.color = "red";
+        return;
+    }
 
-        const description =
-            document.getElementById(
-                "description"
-            ).value.trim();
+    if (!description) {
+        formMessage.textContent =
+            "Please enter a maintenance description.";
 
+        formMessage.style.color = "red";
+        return;
+    }
 
-        const status =
-            document.getElementById(
-                "maintenance_status"
-            ).value;
+    const submitButton = form.querySelector('button[type="submit"]');
 
+    if (submitButton) {
+        submitButton.disabled = true;
+    }
 
-        // VALIDATION
+    formMessage.textContent = "Saving maintenance record...";
+    formMessage.style.color = "black";
 
-        if (!vehicleId) {
+    try {
+        const vehicleDoc = await db
+            .collection("vehicles")
+            .doc(vehicleId)
+            .get();
 
-            formMessage.textContent =
-                "Please select a vehicle.";
-
-            formMessage.style.color =
-                "red";
-
-            return;
+        if (!vehicleDoc.exists) {
+            throw new Error("Selected vehicle does not exist.");
         }
 
+        const vehicle = vehicleDoc.data();
+
+        const maintenanceData = {
+            vehicleId: vehicleId,
+            service_date: serviceDate,
+            next_service_date: nextServiceDate,
+            description: description,
+            status: status,
+            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+        };
+
+        if (id) {
+            await db.collection("maintenance")
+                .doc(id)
+                .update(maintenanceData);
+
+        } else {
+            maintenanceData.createdAt =
+                firebase.firestore.FieldValue.serverTimestamp();
+
+            await db.collection("maintenance")
+                .add(maintenanceData);
+        }
+
+        // Update vehicle status when maintenance is scheduled or completed
+        const maintenanceStatus = status.toLowerCase();
 
         if (
-            nextServiceDate &&
-            serviceDate &&
-            nextServiceDate < serviceDate
+            maintenanceStatus === "scheduled" ||
+            maintenanceStatus === "in_progress" ||
+            maintenanceStatus === "pending"
         ) {
+            await db.collection("vehicles")
+                .doc(vehicleId)
+                .update({ status: "maintenance" });
 
-            formMessage.textContent =
-                "Next service date cannot be before service date.";
-
-            formMessage.style.color =
-                "red";
-
-            return;
+        } else if (maintenanceStatus === "completed") {
+            await db.collection("vehicles")
+                .doc(vehicleId)
+                .update({ status: "available" });
         }
 
+        formMessage.textContent = id
+            ? "Maintenance record updated successfully!"
+            : "Maintenance record added successfully!";
 
-        if (!description) {
+        formMessage.style.color = "green";
 
-            formMessage.textContent =
-                "Please enter a maintenance description.";
+        await loadMaintenance();
 
-            formMessage.style.color =
-                "red";
+        setTimeout(closeForm, 700);
 
-            return;
-        }
-
+    } catch (error) {
+        console.error("Save maintenance error:", error);
 
         formMessage.textContent =
-            "Saving maintenance record...";
+            "Unable to save maintenance record. Check Firestore permissions.";
 
-        formMessage.style.color =
-            "black";
+        formMessage.style.color = "red";
 
-
-        try {
-
-            let response;
-
-
-            // ADD
-
-            if (!id) {
-
-                response =
-                    await fetch(
-                        `${API_URL}/maintenance`,
-                        {
-                            method: "POST",
-
-                            headers: {
-
-                                "Content-Type":
-                                    "application/json",
-
-                                "Authorization":
-                                    `Bearer ${token}`
-                            },
-
-                            body:
-                                JSON.stringify({
-
-                                    vehicle_id:
-                                        Number(
-                                            vehicleId
-                                        ),
-
-                                    service_date:
-                                        serviceDate,
-
-                                    next_service_date:
-                                        nextServiceDate,
-
-                                    description:
-                                        description,
-
-                                    status:
-                                        status
-
-                                })
-                        }
-                    );
-
-            }
-
-
-            // UPDATE
-
-            else {
-
-                response =
-                    await fetch(
-                        `${API_URL}/maintenance/${id}`,
-                        {
-                            method: "PUT",
-
-                            headers: {
-
-                                "Content-Type":
-                                    "application/json",
-
-                                "Authorization":
-                                    `Bearer ${token}`
-                            },
-
-                            body:
-                                JSON.stringify({
-
-                                    next_service_date:
-                                        nextServiceDate,
-
-                                    description:
-                                        description,
-
-                                    status:
-                                        status
-
-                                })
-                        }
-                    );
-
-            }
-
-
-            const data =
-                await response.json();
-
-
-            if (!response.ok) {
-
-                formMessage.textContent =
-                    data.message ||
-                    "Failed to save maintenance record.";
-
-                formMessage.style.color =
-                    "red";
-
-                return;
-            }
-
-
-            formMessage.textContent =
-                id
-                    ? "Maintenance record updated successfully!"
-                    : "Maintenance record added successfully!";
-
-            formMessage.style.color =
-                "green";
-
-
-            setTimeout(
-                function () {
-
-                    closeForm();
-
-                    loadMaintenance();
-
-                },
-                700
-            );
-
-
-        } catch (error) {
-
-            console.error(error);
-
-            formMessage.textContent =
-                "Cannot connect to server.";
-
-            formMessage.style.color =
-                "red";
-
+    } finally {
+        if (submitButton) {
+            submitButton.disabled = false;
         }
-
     }
-);
+});
 
 
-// FORMAT DATE
-
-function formatDate(date) {
-
-    if (!date) {
-        return "";
-    }
-
-    return String(date)
-        .split("T")[0];
-
-}
-
-
-// FORMAT STATUS
-
-function formatStatus(status) {
-
-    if (!status) {
-        return "Unknown";
-    }
-
-    return status
-        .replace(/_/g, " ")
-        .replace(
-            /\b\w/g,
-            letter =>
-                letter.toUpperCase()
-        );
-
-}
-
-
+// =====================================
 // INITIAL LOAD
+// =====================================
 
-loadMaintenance();
+auth.onAuthStateChanged(async function (user) {
+    const isAdmin = await checkAdminAccess(user);
+
+    if (isAdmin) {
+        await loadMaintenance();
+    }
+});

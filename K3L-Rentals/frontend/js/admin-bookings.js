@@ -1,188 +1,137 @@
-const token = getToken();
-const user = getUser();
 
-
-// =====================================
-// ADMIN ACCESS CHECK
-// =====================================
-
-if (
-    !token ||
-    !user ||
-    user.role !== "admin"
-) {
-    window.location.href = "admin-login.html";
-}
-
-
-// =====================================
-// ELEMENTS
-// =====================================
+const auth = firebase.auth();
+const db = firebase.firestore();
 
 const bookingFormContainer =
-    document.getElementById(
-        "bookingFormContainer"
-    );
+    document.getElementById("bookingFormContainer");
 
 const bookingForm =
-    document.getElementById(
-        "bookingForm"
-    );
+    document.getElementById("bookingForm");
 
 const cancelBookingEdit =
-    document.getElementById(
-        "cancelBookingEdit"
-    );
+    document.getElementById("cancelBookingEdit");
 
 const bookingFormMessage =
-    document.getElementById(
-        "bookingFormMessage"
-    );
+    document.getElementById("bookingFormMessage");
 
+const bookingTableContainer =
+    document.getElementById("bookingTableContainer");
 
-// =====================================
+let allBookings = [];
+let currentAdmin = null;
+
+// ------------------------------------
+// ADMIN ACCESS CHECK
+// ------------------------------------
+
+async function checkAdminAccess(user) {
+    if (!user) {
+        window.location.href = "admin-login.html";
+        return false;
+    }
+
+    try {
+        const adminDoc = await db
+            .collection("admins")
+            .doc(user.uid)
+            .get();
+
+        if (!adminDoc.exists) {
+            await auth.signOut();
+            localStorage.removeItem("user");
+            window.location.href = "admin-login.html";
+            return false;
+        }
+
+        currentAdmin = user;
+        return true;
+
+    } catch (error) {
+        console.error("Admin verification error:", error);
+
+        bookingTableContainer.innerHTML = `
+            <div class="info-card">
+                <h3>Unable to verify admin access.</h3>
+                <p>${escapeHtml(error.message)}</p>
+            </div>
+        `;
+
+        return false;
+    }
+}
+
+// ------------------------------------
 // LOGOUT
-// =====================================
+// ------------------------------------
 
-document
-    .getElementById("logoutBtn")
-    .addEventListener(
-        "click",
-        logout
-    );
-
-
-// =====================================
-// CANCEL EDIT
-// =====================================
-
-cancelBookingEdit.addEventListener(
+document.getElementById("logoutBtn").addEventListener(
     "click",
     function () {
-
-        bookingFormContainer
-            .classList
-            .add("hidden");
-
-        bookingForm.reset();
-
-        bookingFormMessage.textContent = "";
-
+        logout();
     }
 );
 
+// ------------------------------------
+// CANCEL EDIT
+// ------------------------------------
 
-// =====================================
+cancelBookingEdit.addEventListener("click", function () {
+    bookingFormContainer.classList.add("hidden");
+    bookingForm.reset();
+    bookingFormMessage.textContent = "";
+});
+
+// ------------------------------------
 // LOAD BOOKINGS
-// =====================================
+// ------------------------------------
 
 async function loadBookings() {
-
     try {
+        bookingTableContainer.innerHTML = "<p>Loading bookings...</p>";
 
-        const response =
-            await fetch(
-                `${API_URL}/bookings`,
-                {
-                    method: "GET",
+        const snapshot = await db
+            .collection("bookings")
+            .get();
 
-                    headers: {
-                        "Authorization":
-                            `Bearer ${token}`
-                    }
-                }
-            );
+        allBookings = snapshot.docs.map(doc => ({
+            id: doc.id,
+            ...doc.data()
+        }));
 
+        displayBookings(allBookings);
 
-        const data =
-            await response.json();
+    } catch (error) {
+        console.error("Booking loading error:", error);
 
-
-        if (!response.ok) {
-
-            throw new Error(
-                data.message ||
-                "Failed to fetch bookings"
-            );
-
-        }
-
-
-        displayBookings(data);
-
-    }
-
-    catch (error) {
-
-        console.error(error);
-
-        document.getElementById(
-            "bookingTableContainer"
-        ).innerHTML = `
-
+        bookingTableContainer.innerHTML = `
             <div class="info-card">
-
-                <h3>
-                    Unable to load bookings.
-                </h3>
-
-                <p>
-                    ${error.message}
-                </p>
-
+                <h3>Unable to load bookings.</h3>
+                <p>${escapeHtml(error.message)}</p>
             </div>
-
         `;
-
     }
-
 }
 
-
-// =====================================
+// ------------------------------------
 // DISPLAY BOOKINGS
-// =====================================
+// ------------------------------------
 
 function displayBookings(bookings) {
-
-    const container =
-        document.getElementById(
-            "bookingTableContainer"
-        );
-
-
     if (bookings.length === 0) {
-
-        container.innerHTML = `
-
+        bookingTableContainer.innerHTML = `
             <div class="info-card">
-
-                <h3>
-                    No bookings found.
-                </h3>
-
-                <p>
-                    There are currently no customer bookings.
-                </p>
-
+                <h3>No bookings found.</h3>
+                <p>There are currently no customer bookings.</p>
             </div>
-
         `;
-
         return;
     }
 
-
-    container.innerHTML = `
-
+    bookingTableContainer.innerHTML = `
         <div class="admin-table-wrapper">
-
             <table class="admin-table">
-
                 <thead>
-
                     <tr>
-
                         <th>ID</th>
                         <th>User ID</th>
                         <th>Vehicle</th>
@@ -192,450 +141,253 @@ function displayBookings(bookings) {
                         <th>Total</th>
                         <th>Status</th>
                         <th>Actions</th>
-
                     </tr>
-
                 </thead>
 
-
                 <tbody>
-
-                    ${bookings.map(
-                        booking => `
-
+                    ${bookings.map(booking => `
                         <tr>
+                            <td>${escapeHtml(booking.id)}</td>
+
+                            <td>${escapeHtml(booking.userId || "N/A")}</td>
 
                             <td>
-                                ${booking.id}
+                                ${booking.category === "bike" ? "🏍️" : "🚗"}
+                                ${escapeHtml(booking.model || "N/A")}
                             </td>
 
                             <td>
-                                ${booking.user_id}
+                                ${escapeHtml(booking.vehicle_number || "N/A")}
+                            </td>
+
+                            <td>${escapeHtml(formatDate(booking.start_date))}</td>
+
+                            <td>${escapeHtml(formatDate(booking.end_date))}</td>
+
+                            <td>
+                                ₹${Number(booking.total_amount || 0).toLocaleString("en-IN")}
                             </td>
 
                             <td>
-                                ${booking.model}
-                            </td>
-
-                            <td>
-                                ${booking.vehicle_number}
-                            </td>
-
-                            <td>
-                                ${formatDate(
-                                    booking.start_date
-                                )}
-                            </td>
-
-                            <td>
-                                ${formatDate(
-                                    booking.end_date
-                                )}
-                            </td>
-
-                            <td>
-                                ₹${booking.total_amount}
-                            </td>
-
-                            <td>
-
-                                <span
-                                    class="admin-status
-                                    ${booking.status}">
-
-                                    ${booking.status}
-
+                                <span class="admin-status">
+                                    ${escapeHtml(formatStatus(booking.status))}
                                 </span>
-
                             </td>
 
                             <td>
-
                                 <button
                                     class="table-btn edit-btn"
-                                    onclick="editBooking(${booking.id})">
-
+                                    data-id="${escapeHtml(booking.id)}"
+                                    onclick="editBooking(this.dataset.id)">
                                     Edit
-
                                 </button>
-
 
                                 <button
                                     class="table-btn delete-btn"
-                                    onclick="deleteBooking(${booking.id})">
-
+                                    data-id="${escapeHtml(booking.id)}"
+                                    onclick="deleteBooking(this.dataset.id)">
                                     Delete
-
                                 </button>
-
                             </td>
-
                         </tr>
-
-                    `
-                    ).join("")}
-
+                    `).join("")}
                 </tbody>
-
             </table>
-
         </div>
-
     `;
-
 }
 
-
-// =====================================
+// ------------------------------------
 // FORMAT DATE
-// =====================================
+// ------------------------------------
 
 function formatDate(date) {
+    if (!date) return "N/A";
 
-    if (!date) {
-        return "N/A";
+    if (date.toDate) {
+        return date.toDate().toISOString().split("T")[0];
     }
 
     return String(date).split("T")[0];
-
 }
 
+// ------------------------------------
+// FORMAT STATUS
+// ------------------------------------
 
-// =====================================
+function formatStatus(status) {
+    if (!status) return "Unknown";
+
+    return String(status)
+        .replace(/_/g, " ")
+        .replace(/\b\w/g, letter => letter.toUpperCase());
+}
+
+// ------------------------------------
 // EDIT BOOKING
-// =====================================
+// ------------------------------------
 
-async function editBooking(id) {
+function editBooking(id) {
+    const booking = allBookings.find(item => item.id === id);
 
-    try {
-
-        const response =
-            await fetch(
-                `${API_URL}/bookings`,
-                {
-                    method: "GET",
-
-                    headers: {
-                        "Authorization":
-                            `Bearer ${token}`
-                    }
-                }
-            );
-
-
-        const bookings =
-            await response.json();
-
-
-        if (!response.ok) {
-
-            alert(
-                "Unable to load booking"
-            );
-
-            return;
-
-        }
-
-
-        const booking =
-            bookings.find(
-                item =>
-                    Number(item.id) ===
-                    Number(id)
-            );
-
-
-        if (!booking) {
-
-            alert(
-                "Booking not found"
-            );
-
-            return;
-
-        }
-
-
-        document.getElementById(
-            "bookingId"
-        ).value =
-            booking.id;
-
-
-        document.getElementById(
-            "start_date"
-        ).value =
-            formatDate(
-                booking.start_date
-            );
-
-
-        document.getElementById(
-            "end_date"
-        ).value =
-            formatDate(
-                booking.end_date
-            );
-
-
-        document.getElementById(
-            "booking_status"
-        ).value =
-            booking.status;
-
-
-        bookingFormMessage.textContent =
-            "";
-
-
-        bookingFormContainer
-            .classList
-            .remove("hidden");
-
-
-        window.scrollTo({
-            top: 0,
-            behavior: "smooth"
-        });
-
-    }
-
-    catch (error) {
-
-        console.error(error);
-
-        alert(
-            "Unable to load booking"
-        );
-
-    }
-
-}
-
-
-// =====================================
-// UPDATE BOOKING
-// =====================================
-
-bookingForm.addEventListener(
-    "submit",
-    async function (event) {
-
-        event.preventDefault();
-
-
-        const id =
-            document.getElementById(
-                "bookingId"
-            ).value;
-
-
-        const startDate =
-            document.getElementById(
-                "start_date"
-            ).value;
-
-
-        const endDate =
-            document.getElementById(
-                "end_date"
-            ).value;
-
-
-        const status =
-            document.getElementById(
-                "booking_status"
-            ).value;
-
-
-        if (endDate <= startDate) {
-
-            bookingFormMessage.textContent =
-                "End date must be after start date.";
-
-            bookingFormMessage.style.color =
-                "red";
-
-            return;
-
-        }
-
-
-        bookingFormMessage.textContent =
-            "Updating booking...";
-
-        bookingFormMessage.style.color =
-            "black";
-
-
-        try {
-
-            const response =
-                await fetch(
-                    `${API_URL}/bookings/${id}`,
-                    {
-                        method: "PUT",
-
-                        headers: {
-
-                            "Content-Type":
-                                "application/json",
-
-                            "Authorization":
-                                `Bearer ${token}`
-
-                        },
-
-                        body:
-                            JSON.stringify({
-
-                                start_date:
-                                    startDate,
-
-                                end_date:
-                                    endDate,
-
-                                status:
-                                    status
-
-                            })
-
-                    }
-                );
-
-
-            const data =
-                await response.json();
-
-
-            if (!response.ok) {
-
-                bookingFormMessage.textContent =
-                    data.message ||
-                    "Failed to update booking";
-
-                bookingFormMessage.style.color =
-                    "red";
-
-                return;
-
-            }
-
-
-            bookingFormMessage.textContent =
-                "Booking updated successfully!";
-
-            bookingFormMessage.style.color =
-                "green";
-
-
-            setTimeout(
-                function () {
-
-                    bookingFormContainer
-                        .classList
-                        .add("hidden");
-
-                    bookingForm.reset();
-
-                    loadBookings();
-
-                },
-                700
-            );
-
-        }
-
-        catch (error) {
-
-            console.error(error);
-
-            bookingFormMessage.textContent =
-                "Cannot connect to server.";
-
-            bookingFormMessage.style.color =
-                "red";
-
-        }
-
-    }
-);
-
-
-// =====================================
-// DELETE BOOKING
-// =====================================
-
-async function deleteBooking(id) {
-
-    const confirmed =
-        confirm(
-            "Are you sure you want to delete this booking?"
-        );
-
-
-    if (!confirmed) {
+    if (!booking) {
+        alert("Booking not found.");
         return;
     }
 
+    document.getElementById("bookingId").value = booking.id;
 
-    try {
+    document.getElementById("start_date").value =
+        formatDate(booking.start_date);
 
-        const response =
-            await fetch(
-                `${API_URL}/bookings/${id}`,
-                {
-                    method: "DELETE",
+    document.getElementById("end_date").value =
+        formatDate(booking.end_date);
 
-                    headers: {
-                        "Authorization":
-                            `Bearer ${token}`
-                    }
-                }
-            );
+    document.getElementById("booking_status").value =
+        booking.status || "Pending";
 
+    bookingFormMessage.textContent = "";
 
-        const data =
-            await response.json();
+    bookingFormContainer.classList.remove("hidden");
 
-
-        if (!response.ok) {
-
-            alert(
-                data.message ||
-                "Failed to delete booking"
-            );
-
-            return;
-
-        }
-
-
-        alert(
-            "Booking deleted successfully."
-        );
-
-
-        loadBookings();
-
-    }
-
-    catch (error) {
-
-        console.error(error);
-
-        alert(
-            "Cannot connect to server."
-        );
-
-    }
-
+    window.scrollTo({
+        top: 0,
+        behavior: "smooth"
+    });
 }
 
+// ------------------------------------
+// UPDATE BOOKING
+// ------------------------------------
 
-// =====================================
+bookingForm.addEventListener("submit", async function (event) {
+    event.preventDefault();
+
+    const id = document.getElementById("bookingId").value;
+
+    const startDate = document.getElementById("start_date").value;
+
+    const endDate = document.getElementById("end_date").value;
+
+    const status = document.getElementById("booking_status").value;
+
+    if (!id) {
+        bookingFormMessage.textContent = "Invalid booking ID.";
+        bookingFormMessage.style.color = "red";
+        return;
+    }
+
+    if (endDate <= startDate) {
+        bookingFormMessage.textContent =
+            "End date must be after start date.";
+
+        bookingFormMessage.style.color = "red";
+        return;
+    }
+
+    bookingFormMessage.textContent = "Updating booking...";
+    bookingFormMessage.style.color = "black";
+
+    try {
+        const bookingRef = db.collection("bookings").doc(id);
+
+        const bookingDoc = await bookingRef.get();
+
+        if (!bookingDoc.exists) {
+            throw new Error("Booking not found.");
+        }
+
+        const booking = bookingDoc.data();
+
+        const start = new Date(startDate + "T00:00:00");
+        const end = new Date(endDate + "T00:00:00");
+
+        const rentalDays = Math.round(
+            (end - start) / (1000 * 60 * 60 * 24)
+        );
+
+        if (rentalDays <= 0) {
+            throw new Error("Invalid rental duration.");
+        }
+
+        const pricePerDay = Number(booking.price_per_day || 0);
+
+        const totalAmount = rentalDays * pricePerDay;
+
+        await bookingRef.update({
+            start_date: startDate,
+            end_date: endDate,
+            rental_days: rentalDays,
+            total_amount: totalAmount,
+            status: status,
+            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+
+        bookingFormMessage.textContent =
+            "Booking updated successfully!";
+
+        bookingFormMessage.style.color = "green";
+
+        setTimeout(async function () {
+            bookingFormContainer.classList.add("hidden");
+            bookingForm.reset();
+            await loadBookings();
+        }, 700);
+
+    } catch (error) {
+        console.error("Booking update error:", error);
+
+        bookingFormMessage.textContent = error.message;
+        bookingFormMessage.style.color = "red";
+    }
+});
+
+// ------------------------------------
+// DELETE BOOKING
+// ------------------------------------
+
+async function deleteBooking(id) {
+    const confirmed = confirm(
+        "Are you sure you want to delete this booking?"
+    );
+
+    if (!confirmed) return;
+
+    try {
+        await db.collection("bookings").doc(id).delete();
+
+        alert("Booking deleted successfully.");
+
+        await loadBookings();
+
+    } catch (error) {
+        console.error("Booking deletion error:", error);
+
+        alert("Failed to delete booking: " + error.message);
+    }
+}
+
+// ------------------------------------
+// ESCAPE HTML
+// ------------------------------------
+
+function escapeHtml(value) {
+    return String(value)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+}
+
+// ------------------------------------
 // INITIAL LOAD
-// =====================================
+// ------------------------------------
 
-loadBookings();
+auth.onAuthStateChanged(async function (user) {
+    const isAdmin = await checkAdminAccess(user);
+
+    if (isAdmin) {
+        await loadBookings();
+    }
+});

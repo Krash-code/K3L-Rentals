@@ -1,216 +1,297 @@
-const params =
-    new URLSearchParams(window.location.search);
 
-const vehicleId =
-    params.get("id");
+const auth = firebase.auth();
+const db = firebase.firestore();
+
+const params = new URLSearchParams(window.location.search);
+const vehicleId = params.get("id");
+
+const vehicleSummary = document.getElementById("vehicleSummary");
+const bookingForm = document.getElementById("bookingForm");
+const bookingMessage = document.getElementById("bookingMessage");
+
+let selectedVehicle = null;
 
 
-const vehicleSummary =
-    document.getElementById("vehicleSummary");
+// ------------------------------------
+// ESCAPE HTML
+// ------------------------------------
+
+function escapeHTML(value) {
+    return String(value ?? "").replace(/[&<>"']/g, char => ({
+        "&": "&amp;",
+        "<": "&lt;",
+        ">": "&gt;",
+        '"': "&quot;",
+        "'": "&#39;"
+    })[char]);
+}
 
 
-const bookingForm =
-    document.getElementById("bookingForm");
-
-
-const bookingMessage =
-    document.getElementById("bookingMessage");
-
+// ------------------------------------
+// LOAD VEHICLE FROM FIRESTORE
+// ------------------------------------
 
 async function loadVehicle() {
-
     if (!vehicleId) {
-
-        vehicleSummary.innerHTML =
-            "<p>Vehicle not selected.</p>";
-
+        vehicleSummary.innerHTML = "<p>Vehicle not selected.</p>";
         bookingForm.style.display = "none";
-
         return;
     }
 
-
     try {
+        const vehicleDoc = await db
+            .collection("vehicles")
+            .doc(vehicleId)
+            .get();
 
-        const response = await fetch(
-            `${API_URL}/vehicles/${vehicleId}`
-        );
-
-        const vehicle =
-            await response.json();
-
-
-        if (!response.ok) {
-
-            vehicleSummary.innerHTML =
-                `<p>${vehicle.message}</p>`;
-
+        if (!vehicleDoc.exists) {
+            vehicleSummary.innerHTML = "<p>Vehicle not found.</p>";
+            bookingForm.style.display = "none";
             return;
         }
 
+        selectedVehicle = {
+            id: vehicleDoc.id,
+            ...vehicleDoc.data()
+        };
+
+        const category = String(
+            selectedVehicle.category || "car"
+        ).toLowerCase();
+
+        const icon = category === "bike" ? "🏍️" : "🚗";
 
         vehicleSummary.innerHTML = `
-
             <div class="info-card">
-
                 <h2>
-                    ${vehicle.model}
+                    ${icon} ${escapeHTML(selectedVehicle.model || "Vehicle")}
                 </h2>
 
+                <p>${escapeHTML(selectedVehicle.type || category)}</p>
+
                 <p>
-                    ${vehicle.type}
+                    Vehicle Number:
+                    ${escapeHTML(selectedVehicle.vehicle_number || "N/A")}
                 </p>
 
                 <p>
-                    📍 ${vehicle.location}
+                    📍 ${escapeHTML(selectedVehicle.location || "N/A")}
                 </p>
 
                 <p>
                     <strong>
-                        ₹${vehicle.price_per_day}
+                        ₹${Number(selectedVehicle.price_per_day || 0).toLocaleString("en-IN")}
                     </strong>
                     / day
                 </p>
-
             </div>
-
         `;
 
+        const status = String(
+            selectedVehicle.status || ""
+        ).toLowerCase();
+
+        if (status !== "available") {
+            bookingMessage.textContent =
+                "This vehicle is currently unavailable.";
+
+            bookingMessage.style.color = "red";
+            bookingForm.style.display = "none";
+        }
 
     } catch (error) {
-
-        console.error(error);
+        console.error("Vehicle loading error:", error);
 
         vehicleSummary.innerHTML =
-            "<p>Unable to load vehicle.</p>";
+            "<p>Unable to load vehicle. Please try again.</p>";
+
+        bookingForm.style.display = "none";
     }
 }
 
 
-bookingForm.addEventListener(
-    "submit",
-    async (event) => {
+// ------------------------------------
+// CREATE BOOKING
+// ------------------------------------
 
-        event.preventDefault();
+bookingForm.addEventListener("submit", async function (event) {
+    event.preventDefault();
 
+    const user = auth.currentUser;
 
-        const token = getToken();
+    if (!user) {
+        window.location.href = "login.html";
+        return;
+    }
 
-        const user = getUser();
+    if (!selectedVehicle) {
+        bookingMessage.textContent =
+            "Vehicle details are not available.";
 
+        bookingMessage.style.color = "red";
+        return;
+    }
 
-        if (!token || !user) {
+    const startDate = document.getElementById("start_date").value;
+    const endDate = document.getElementById("end_date").value;
 
-            window.location.href =
-                "login.html";
+    if (!startDate || !endDate) {
+        bookingMessage.textContent =
+            "Please select both dates.";
 
-            return;
+        bookingMessage.style.color = "red";
+        return;
+    }
+
+    // Validate rental dates
+    const start = new Date(startDate + "T00:00:00");
+    const end = new Date(endDate + "T00:00:00");
+
+    if (
+        Number.isNaN(start.getTime()) ||
+        Number.isNaN(end.getTime()) ||
+        end <= start
+    ) {
+        bookingMessage.textContent =
+            "End date must be after the start date.";
+
+        bookingMessage.style.color = "red";
+        return;
+    }
+
+    const rentalDays = Math.round(
+        (end - start) / (1000 * 60 * 60 * 24)
+    );
+
+    const submitButton = bookingForm.querySelector(
+        'button[type="submit"]'
+    );
+
+    if (submitButton) {
+        submitButton.disabled = true;
+    }
+
+    bookingMessage.textContent = "Creating your booking...";
+    bookingMessage.style.color = "black";
+
+    try {
+        // Check latest vehicle details
+        const vehicleRef = db
+            .collection("vehicles")
+            .doc(vehicleId);
+
+        const latestVehicle = await vehicleRef.get();
+
+        if (!latestVehicle.exists) {
+            throw new Error("Vehicle no longer exists.");
         }
 
+        const vehicle = latestVehicle.data();
 
-        const start_date =
-            document.getElementById(
-                "start_date"
-            ).value;
-
-
-        const end_date =
-            document.getElementById(
-                "end_date"
-            ).value;
-
-
-        try {
-
-            const response = await fetch(
-                `${API_URL}/bookings`,
-                {
-                    method: "POST",
-
-                    headers: {
-
-                        "Content-Type":
-                            "application/json",
-
-                        "Authorization":
-                            `Bearer ${token}`
-                    },
-
-                    body: JSON.stringify({
-
-                        vehicle_id:
-                            Number(vehicleId),
-
-                        start_date,
-
-                        end_date
-
-                    })
-                }
+        if (
+            String(vehicle.status || "").toLowerCase()
+            !== "available"
+        ) {
+            throw new Error(
+                "This vehicle is currently unavailable."
             );
+        }
 
+        const pricePerDay = Number(vehicle.price_per_day);
 
-            const data =
-                await response.json();
+        if (
+            !Number.isFinite(pricePerDay) ||
+            pricePerDay <= 0
+        ) {
+            throw new Error("Invalid vehicle rental price.");
+        }
 
+        const totalAmount = rentalDays * pricePerDay;
 
-            if (!response.ok) {
+        const category = String(
+            vehicle.category || "car"
+        ).toLowerCase();
 
-                bookingMessage.textContent =
-                    data.message ||
-                    "Booking failed";
+        // Save booking in Firestore
+        const bookingRef = await db
+            .collection("bookings")
+            .add({
+                userId: user.uid,
 
-                bookingMessage.style.color =
-                    "red";
+                vehicleId: vehicleId,
+                model: vehicle.model || "",
+                vehicle_number: vehicle.vehicle_number || "",
+                category: category,
+                type: vehicle.type || "",
+                location: vehicle.location || "",
 
-                return;
-            }
+                start_date: startDate,
+                end_date: endDate,
 
+                rental_days: rentalDays,
+                price_per_day: pricePerDay,
+                total_amount: totalAmount,
 
-            bookingMessage.innerHTML = `
+                status: "Pending",
 
-                <p style="color:green;">
+                createdAt:
+                    firebase.firestore.FieldValue.serverTimestamp()
+            });
+
+        bookingMessage.innerHTML = `
+            <div class="info-card">
+                <h3 style="color:green;">
                     Booking successful!
-                </p>
+                </h3>
 
                 <p>
                     Booking ID:
-                    ${data.bookingId}
+                    ${escapeHTML(bookingRef.id)}
+                </p>
+
+                <p>
+                    Rental Days: ${rentalDays}
                 </p>
 
                 <p>
                     Total Amount:
-                    ₹${data.total_amount}
+                    ₹${totalAmount.toLocaleString("en-IN")}
                 </p>
 
-                <a
-                    href="my-bookings.html"
-                    class="primary-btn">
+                <p>Status: Pending</p>
 
+                <a href="my-bookings.html" class="primary-btn">
                     View My Bookings
-
                 </a>
+            </div>
+        `;
 
-            `;
+        bookingForm.style.display = "none";
 
+    } catch (error) {
+        console.error("Booking error:", error);
 
-            bookingForm.style.display =
-                "none";
+        bookingMessage.textContent =
+            error.message || "Unable to create booking.";
 
+        bookingMessage.style.color = "red";
 
-        } catch (error) {
-
-            console.error(error);
-
-            bookingMessage.textContent =
-                "Unable to connect to server.";
-
-            bookingMessage.style.color =
-                "red";
+    } finally {
+        if (submitButton) {
+            submitButton.disabled = false;
         }
-
     }
-);
+});
 
 
-loadVehicle();
+// ------------------------------------
+// CHECK FIREBASE LOGIN
+// ------------------------------------
+
+auth.onAuthStateChanged(function (user) {
+    if (user) {
+        loadVehicle();
+    } else {
+        window.location.href = "login.html";
+    }
+});

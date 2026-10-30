@@ -1,11 +1,3 @@
-const API_URL = "http://localhost:3000/api";
-
-
-// Get JWT token
-function getToken() {
-    return localStorage.getItem("token");
-}
-
 
 // Get logged-in user
 function getUser() {
@@ -23,18 +15,28 @@ function getUser() {
 }
 
 
-// Check login
+// Check Firebase login session
 function isLoggedIn() {
-    return !!getToken();
+    return !!(
+        typeof firebase !== "undefined" &&
+        firebase.auth().currentUser
+    );
 }
 
 
-// Logout
-function logout() {
-    localStorage.removeItem("token");
-    localStorage.removeItem("user");
+// Logout using Firebase
+async function logout() {
+    try {
+        await firebase.auth().signOut();
 
-    window.location.href = "index.html";
+        localStorage.removeItem("user");
+
+        window.location.href = "index.html";
+
+    } catch (error) {
+        console.error("Logout error:", error);
+        alert("Unable to logout. Please try again.");
+    }
 }
 
 
@@ -46,57 +48,39 @@ function updateNavbar() {
     const logoutBtn = document.getElementById("logoutBtn");
     const bookingsLink = document.getElementById("bookingsLink");
 
-    const loggedIn = isLoggedIn();
+    // Firebase authentication session
+    firebase.auth().onAuthStateChanged(function (user) {
 
+        const loggedIn = !!user;
 
-    // Login
-    if (loginLink) {
-
-        if (loggedIn) {
-            loginLink.classList.add("hidden");
-        } else {
-            loginLink.classList.remove("hidden");
-        }
-    }
-
-
-    // Register
-    if (registerLink) {
-
-        if (loggedIn) {
-            registerLink.classList.add("hidden");
-        } else {
-            registerLink.classList.remove("hidden");
-        }
-    }
-
-
-    // My bookings
-    if (bookingsLink) {
-
-        if (loggedIn) {
-            bookingsLink.classList.remove("hidden");
-        } else {
-            bookingsLink.classList.add("hidden");
-        }
-    }
-
-
-    // Logout
-    if (logoutBtn) {
-
-        if (loggedIn) {
-            logoutBtn.classList.remove("hidden");
-        } else {
-            logoutBtn.classList.add("hidden");
+        // Login link
+        if (loginLink) {
+            loginLink.classList.toggle("hidden", loggedIn);
         }
 
-        logoutBtn.onclick = logout;
-    }
+        // Register link
+        if (registerLink) {
+            registerLink.classList.toggle("hidden", loggedIn);
+        }
+
+        // My bookings link
+        if (bookingsLink) {
+            bookingsLink.classList.toggle("hidden", !loggedIn);
+        }
+
+        // Logout button
+        if (logoutBtn) {
+            logoutBtn.classList.toggle("hidden", !loggedIn);
+            logoutBtn.onclick = logout;
+        }
+
+        // Keep local user information in sync
+        if (!loggedIn) {
+            localStorage.removeItem("user");
+        }
+    });
 }
 
 
-document.addEventListener(
-    "DOMContentLoaded",
-    updateNavbar
-);
+// Run after page loads
+document.addEventListener("DOMContentLoaded", updateNavbar);

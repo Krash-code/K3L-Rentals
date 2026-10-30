@@ -1,128 +1,99 @@
-const token = getToken();
-const user = getUser();
 
+const auth = firebase.auth();
+const db = firebase.firestore();
 
-// ADMIN ACCESS CHECK
-if (
-    !token ||
-    !user ||
-    user.role !== "admin"
-) {
-    window.location.href =
-        "admin-login.html";
-}
+const container = document.getElementById("fleetTableContainer");
 
-
-// LOGOUT
-document
-    .getElementById("logoutBtn")
-    .addEventListener(
-        "click",
-        logout
-    );
-
-
-// REFRESH BUTTON
-document
-    .getElementById("refreshFleetBtn")
-    .addEventListener(
-        "click",
-        loadFleet
-    );
-
-
-// LOAD FLEET
-async function loadFleet() {
-
-    try {
-
-        const response =
-            await fetch(
-                `${API_URL}/fleet`,
-                {
-                    method: "GET",
-
-                    headers: {
-                        "Authorization":
-                            `Bearer ${token}`
-                    }
-                }
-            );
-
-
-        const data =
-            await response.json();
-
-
-        if (!response.ok) {
-
-            throw new Error(
-                data.message ||
-                "Failed to fetch fleet"
-            );
-
-        }
-
-
-        displayFleet(data);
-
-
-    } catch (error) {
-
-        console.error(error);
-
-        document
-            .getElementById(
-                "fleetTableContainer"
-            )
-            .innerHTML = `
-
-                <div class="info-card">
-
-                    <h3>
-                        Unable to load fleet.
-                    </h3>
-
-                    <p>
-                        ${error.message}
-                    </p>
-
-                </div>
-
-            `;
-
+// Check admin access
+async function checkAdminAccess(user) {
+    if (!user) {
+        window.location.href = "admin-login.html";
+        return false;
     }
 
+    try {
+        const adminDoc = await db
+            .collection("admins")
+            .doc(user.uid)
+            .get();
+
+        if (!adminDoc.exists) {
+            await auth.signOut();
+            localStorage.removeItem("user");
+            window.location.href = "admin-login.html";
+            return false;
+        }
+
+        return true;
+    } catch (error) {
+        console.error("Admin verification failed:", error);
+        container.innerHTML = `
+            <div class="info-card">
+                <h3>Unable to verify admin access.</h3>
+                <p>${escapeHtml(error.message)}</p>
+            </div>
+        `;
+        return false;
+    }
 }
 
+// Logout
+document.getElementById("logoutBtn").addEventListener("click", function () {
+    logout();
+});
 
-// DISPLAY FLEET
+// Refresh fleet
+document.getElementById("refreshFleetBtn").addEventListener("click", function () {
+    loadFleet();
+});
+
+// Load fleet from Firestore
+async function loadFleet() {
+    try {
+        container.innerHTML = "<p>Loading fleet...</p>";
+
+        const snapshot = await db
+            .collection("vehicles")
+            .get();
+
+        const vehicles = snapshot.docs.map(doc => ({
+            id: doc.id,
+            ...doc.data()
+        }));
+
+        displayFleet(vehicles);
+
+    } catch (error) {
+        console.error("Fleet loading error:", error);
+
+        container.innerHTML = `
+            <div class="info-card">
+                <h3>Unable to load fleet.</h3>
+                <p>${escapeHtml(error.message)}</p>
+            </div>
+        `;
+    }
+}
+
+// Display fleet
 function displayFleet(vehicles) {
-
-    const container =
-        document.getElementById("fleetTableContainer");
-
     if (vehicles.length === 0) {
-
         container.innerHTML = `
             <div class="info-card">
                 <h3>No vehicles found.</h3>
                 <p>There are currently no vehicles in the fleet.</p>
             </div>
         `;
-
         return;
     }
 
     container.innerHTML = `
-
         <div class="admin-table-wrapper">
-
             <table class="admin-table">
-
                 <thead>
                     <tr>
                         <th>ID</th>
+                        <th>Category</th>
                         <th>Vehicle Number</th>
                         <th>Model</th>
                         <th>Type</th>
@@ -133,228 +104,123 @@ function displayFleet(vehicles) {
                 </thead>
 
                 <tbody>
+                    ${vehicles.map(vehicle => {
+                        const category = vehicle.category || "car";
+                        const icon = category === "bike" ? "🏍️" : "🚗";
 
-                    ${vehicles.map(vehicle => `
+                        return `
+                            <tr>
+                                <td>${escapeHtml(vehicle.id)}</td>
 
-                        <tr>
+                                <td>
+                                    ${icon} ${escapeHtml(category.toUpperCase())}
+                                </td>
 
-                            <td>
-                                ${vehicle.id}
-                            </td>
+                                <td>
+                                    ${escapeHtml(vehicle.vehicle_number || "N/A")}
+                                </td>
 
-                            <td>
-                                ${vehicle.vehicle_number}
-                            </td>
+                                <td>
+                                    ${escapeHtml(vehicle.model || "N/A")}
+                                </td>
 
-                            <td>
-                                ${vehicle.model}
-                            </td>
+                                <td>
+                                    ${escapeHtml(vehicle.type || "N/A")}
+                                </td>
 
-                            <td>
-                                ${vehicle.type || "N/A"}
-                            </td>
-
-
-                            <!-- LOCATION -->
-                            <td>
-
-                                <input
-                                    type="text"
-                                    id="location-${vehicle.id}"
-                                    value="${escapeHtml(
-                                        vehicle.location || ""
-                                    )}"
-                                    class="fleet-input"
-                                >
-
-                            </td>
-
-
-                            <!-- STATUS -->
-                            <td>
-
-                                <select
-                                    id="status-${vehicle.id}"
-                                    class="fleet-select"
-                                >
-
-                                    <option
-                                        value="available"
-                                        ${vehicle.status === "available" ? "selected" : ""}
+                                <td>
+                                    <input
+                                        type="text"
+                                        id="location-${escapeHtml(vehicle.id)}"
+                                        value="${escapeHtml(vehicle.location || "")}"
+                                        class="fleet-input"
                                     >
-                                        Available
-                                    </option>
+                                </td>
 
-                                    <option
-                                        value="booked"
-                                        ${vehicle.status === "booked" ? "selected" : ""}
+                                <td>
+                                    <select
+                                        id="status-${escapeHtml(vehicle.id)}"
+                                        class="fleet-select"
                                     >
-                                        Booked
-                                    </option>
+                                        <option value="available"
+                                            ${vehicle.status === "available" || vehicle.status === "Available" ? "selected" : ""}>
+                                            Available
+                                        </option>
 
-                                    <option
-                                        value="in_use"
-                                        ${vehicle.status === "in_use" ? "selected" : ""}
+                                        <option value="booked"
+                                            ${vehicle.status === "booked" || vehicle.status === "Booked" ? "selected" : ""}>
+                                            Booked
+                                        </option>
+
+                                        <option value="in_use"
+                                            ${vehicle.status === "in_use" || vehicle.status === "In Use" ? "selected" : ""}>
+                                            In Use
+                                        </option>
+
+                                        <option value="maintenance"
+                                            ${vehicle.status === "maintenance" || vehicle.status === "Maintenance" ? "selected" : ""}>
+                                            Maintenance
+                                        </option>
+                                    </select>
+                                </td>
+
+                                <td>
+                                    <button
+                                        class="table-btn edit-btn"
+                                        data-id="${escapeHtml(vehicle.id)}"
+                                        onclick="saveFleetChanges(this.dataset.id)"
                                     >
-                                        In Use
-                                    </option>
-
-                                    <option
-                                        value="maintenance"
-                                        ${vehicle.status === "maintenance" ? "selected" : ""}
-                                    >
-                                        Maintenance
-                                    </option>
-
-                                </select>
-
-                            </td>
-
-
-                            <!-- ACTIONS -->
-                            <td>
-
-                                <button
-                                    class="table-btn edit-btn"
-                                    onclick="saveFleetChanges(${vehicle.id})"
-                                >
-                                    Save
-                                </button>
-
-                            </td>
-
-                        </tr>
-
-                    `).join("")}
-
+                                        Save
+                                    </button>
+                                </td>
+                            </tr>
+                        `;
+                    }).join("")}
                 </tbody>
-
             </table>
-
         </div>
-
     `;
 }
 
+// Save location and status
 async function saveFleetChanges(id) {
+    const statusElement = document.getElementById(`status-${id}`);
+    const locationElement = document.getElementById(`location-${id}`);
 
-    const status =
-        document.getElementById(
-            `status-${id}`
-        ).value;
-
-    const location =
-        document.getElementById(
-            `location-${id}`
-        ).value.trim();
-
-
-    if (!location) {
-
-        alert("Location cannot be empty.");
-
+    if (!statusElement || !locationElement) {
+        alert("Vehicle details not found.");
         return;
     }
 
+    const status = statusElement.value;
+    const location = locationElement.value.trim();
+
+    if (!location) {
+        alert("Location cannot be empty.");
+        return;
+    }
 
     try {
+        await db.collection("vehicles")
+            .doc(id)
+            .update({
+                status: status,
+                location: location,
+                updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+            });
 
-        // UPDATE STATUS
-        const statusResponse =
-            await fetch(
-                `${API_URL}/fleet/${id}/status`,
-                {
-                    method: "PUT",
+        alert("Fleet details updated successfully!");
 
-                    headers: {
-                        "Content-Type":
-                            "application/json",
-
-                        "Authorization":
-                            `Bearer ${token}`
-                    },
-
-                    body: JSON.stringify({
-                        status: status
-                    })
-                }
-            );
-
-
-        const statusData =
-            await statusResponse.json();
-
-
-        if (!statusResponse.ok) {
-
-            alert(
-                statusData.message ||
-                "Failed to update status"
-            );
-
-            return;
-        }
-
-
-        // UPDATE LOCATION
-        const locationResponse =
-            await fetch(
-                `${API_URL}/fleet/${id}/location`,
-                {
-                    method: "PUT",
-
-                    headers: {
-                        "Content-Type":
-                            "application/json",
-
-                        "Authorization":
-                            `Bearer ${token}`
-                    },
-
-                    body: JSON.stringify({
-                        location: location
-                    })
-                }
-            );
-
-
-        const locationData =
-            await locationResponse.json();
-
-
-        if (!locationResponse.ok) {
-
-            alert(
-                locationData.message ||
-                "Failed to update location"
-            );
-
-            return;
-        }
-
-
-        alert(
-            "Fleet details updated successfully!"
-        );
-
-
-        // Reload latest data
-        loadFleet();
-
+        await loadFleet();
 
     } catch (error) {
-
-        console.error(error);
-
-        alert(
-            "Cannot connect to server."
-        );
-
+        console.error("Fleet update error:", error);
+        alert("Failed to update fleet: " + error.message);
     }
 }
 
+// Escape HTML
 function escapeHtml(value) {
-
     return String(value)
         .replace(/&/g, "&amp;")
         .replace(/</g, "&lt;")
@@ -363,35 +229,20 @@ function escapeHtml(value) {
         .replace(/'/g, "&#039;");
 }
 
-// FORMAT STATUS
-function formatStatus(
-    status
-) {
+// Format status
+function formatStatus(status) {
+    if (!status) return "Unknown";
 
-    if (!status) {
-        return "Unknown";
+    return String(status)
+        .replace(/_/g, " ")
+        .replace(/\b\w/g, letter => letter.toUpperCase());
+}
+
+// Initial load after Firebase authentication
+auth.onAuthStateChanged(async function (user) {
+    const isAdmin = await checkAdminAccess(user);
+
+    if (isAdmin) {
+        await loadFleet();
     }
-
-    return status
-        .replace("_", " ")
-        .replace(
-            /\b\w/g,
-            letter =>
-                letter.toUpperCase()
-        );
-}
-
-
-// ESCAPE QUOTES
-function escapeQuotes(
-    value
-) {
-
-    return String(value)
-        .replace(/\\/g, "\\\\")
-        .replace(/'/g, "\\'");
-
-}
-
-// INITIAL LOAD
-loadFleet();
+});

@@ -1,191 +1,135 @@
+
 async function loadBookings() {
-
-    const token =
-        getToken();
-
-
-    const user =
-        getUser();
-
-
-    // Not logged in
-    if (!token || !user) {
-
-        window.location.href =
-            "login.html";
-
-        return;
-    }
-
+    const container = document.getElementById("bookingsContainer");
 
     try {
+        // Check Firebase login
+        const user = firebase.auth().currentUser;
 
-        const response =
-            await fetch(
-                `${API_URL}/bookings`,
-                {
-
-                    method: "GET",
-
-                    headers: {
-
-                        "Authorization":
-                            `Bearer ${token}`
-
-                    }
-
-                }
-            );
-
-
-        const data =
-            await response.json();
-
-
-        if (!response.ok) {
-
-            document.getElementById(
-                "bookingsContainer"
-            ).innerHTML = `
-
-                <div class="info-card">
-
-                    <h3>
-                        ${data.message}
-                    </h3>
-
-                </div>
-
-            `;
-
+        if (!user) {
+            window.location.href = "login.html";
             return;
         }
 
+        container.innerHTML = `
+            <div class="info-card">
+                <h3>Loading your bookings...</h3>
+            </div>
+        `;
 
-        /*
-            Your current backend returns
-            all bookings.
+        // Get only bookings belonging to this user
+        const snapshot = await firebase.firestore()
+            .collection("bookings")
+            .where("userId", "==", user.uid)
+            .get();
 
-            So we filter them here using
-            the logged-in user's ID.
-        */
-
-        const myBookings =
-            data.filter(
-                booking =>
-                    Number(booking.user_id) ===
-                    Number(user.id)
-            );
-
-
-        const container =
-            document.getElementById(
-                "bookingsContainer"
-            );
-
+        const myBookings = snapshot.docs.map(doc => ({
+            id: doc.id,
+            ...doc.data()
+        }));
 
         if (myBookings.length === 0) {
-
             container.innerHTML = `
-
                 <div class="info-card">
-
-                    <h3>
-                        No bookings yet
-                    </h3>
+                    <h3>No bookings yet</h3>
 
                     <p>
-                        You haven't booked
-                        any vehicles yet.
+                        You haven't booked any vehicles yet.
                     </p>
 
                     <br>
 
-                    <a
-                        href="vehicles.html"
-                        class="primary-btn">
-
+                    <a href="vehicles.html" class="primary-btn">
                         Browse Vehicles
-
                     </a>
-
                 </div>
-
             `;
-
             return;
         }
 
+        container.innerHTML = myBookings.map(booking => {
 
-        container.innerHTML =
-            myBookings.map(
-                booking => `
+            const model = booking.model || "Vehicle";
+            const vehicleNumber = booking.vehicle_number || "N/A";
+            const startDate = booking.start_date || "N/A";
+            const endDate = booking.end_date || "N/A";
+            const amount = booking.total_amount ?? "N/A";
+            const status = booking.status || "Pending";
 
+            const category = String(
+                booking.category || "car"
+            ).toLowerCase();
+
+            const icon = category === "bike" ? "🏍️" : "🚗";
+
+            return `
                 <div class="booking-item">
 
                     <h3>
-                        ${booking.model}
+                        ${icon} ${escapeHTML(model)}
                     </h3>
-
 
                     <p>
                         Vehicle Number:
-                        ${booking.vehicle_number}
+                        ${escapeHTML(vehicleNumber)}
                     </p>
-
 
                     <p>
                         Start Date:
-                        ${booking.start_date}
+                        ${escapeHTML(startDate)}
                     </p>
-
 
                     <p>
                         End Date:
-                        ${booking.end_date}
+                        ${escapeHTML(endDate)}
                     </p>
-
 
                     <p>
                         Total Amount:
-                        ₹${booking.total_amount}
+                        ₹${escapeHTML(amount)}
                     </p>
-
 
                     <p>
                         Status:
-
                         <span class="status">
-                            ${booking.status}
+                            ${escapeHTML(status)}
                         </span>
-
                     </p>
 
                 </div>
-
-            `
-            ).join("");
-
+            `;
+        }).join("");
 
     } catch (error) {
+        console.error("Unable to load bookings:", error);
 
-        console.error(error);
-
-        document.getElementById(
-            "bookingsContainer"
-        ).innerHTML = `
-
+        container.innerHTML = `
             <div class="info-card">
-
-                <h3>
-                    Unable to load bookings.
-                </h3>
-
+                <h3>Unable to load bookings</h3>
+                <p>Please check your Firestore permissions.</p>
             </div>
-
         `;
     }
 }
 
 
-loadBookings();
+// Prevent HTML injection
+function escapeHTML(value) {
+    return String(value ?? "").replace(/[&<>"']/g, char => ({
+        "&": "&amp;",
+        "<": "&lt;",
+        ">": "&gt;",
+        '"': "&quot;",
+        "'": "&#39;"
+    })[char]);
+}
+
+
+// Wait until Firebase checks the login session
+firebase.auth().onAuthStateChanged(user => {
+    if (user) {
+        loadBookings();
+    } else {
+        window.location.href = "login.html";
+    }
+});

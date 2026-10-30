@@ -1,5 +1,6 @@
 const express = require("express");
 
+const adminOnly = require("../middleware/adminMiddleware");
 const router = express.Router();
 
 const {
@@ -31,6 +32,7 @@ router.post(
 router.put(
     "/:id",
     authenticateToken,
+    adminOnly,
     updateBooking
 );
 
@@ -39,6 +41,7 @@ router.put(
 router.delete(
     "/:id",
     authenticateToken,
+    adminOnly,
     deleteBooking
 );
 

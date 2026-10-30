@@ -193,24 +193,35 @@
 </footer>
 
 
-<script src="js/common.js"></script>
-<script>
 
+<!-- Firebase SDK -->
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+
+<!-- Firebase configuration -->
+<script src="js/firebase-config.js"></script>
+
+<!-- Existing common JavaScript -->
+<script src="js/common.js"></script>
+
+<script>
     async function loadHomeVehicles() {
+        const container = document.getElementById("availableVehicles");
 
         try {
+            const snapshot = await firebase.firestore()
+                .collection("vehicles")
+                .get();
 
-            const response = await fetch(
-                "http://localhost:3000/api/vehicles"
+            const vehicles = snapshot.docs.map(doc => ({
+                id: doc.id,
+                ...doc.data()
+            }));
+
+            const available = vehicles.filter(v =>
+                String(v.status || "").toLowerCase() === "available"
             );
-
-            const vehicles = await response.json();
-
-            const container =
-                document.getElementById("availableVehicles");
-
-            const available =
-                vehicles.filter(v => v.status === "available");
 
             if (available.length === 0) {
                 container.innerHTML =
@@ -218,54 +229,54 @@
                 return;
             }
 
-            container.innerHTML =
-                available.slice(0, 3).map(vehicle => `
-                    <div class="vehicle-card">
+            container.innerHTML = available.slice(0, 3).map(vehicle => `
+                <div class="vehicle-card">
 
-                        <div class="vehicle-image">
-                            ${vehicle.image
-                                ? `<img src="${vehicle.image}" alt="${vehicle.model}">`
-                                : "🚗"}
-                        </div>
+                    <div class="vehicle-image">
+                        ${vehicle.image
+                            ? `<img src="${vehicle.image}" alt="${vehicle.model || "Vehicle"}">`
+                            : "🚗"}
+                    </div>
 
-                        <div class="vehicle-info">
+                    <div class="vehicle-info">
 
-                            <h3>${vehicle.model}</h3>
+                        <h3>${vehicle.model || "Vehicle"}</h3>
 
-                            <p>${vehicle.type || "Vehicle"}</p>
+                        <p>
+    ${String(vehicle.category || "").toLowerCase() === "bike"
+        ? "🏍️ Bike"
+        : "🚗 Car"}
+    ${vehicle.type ? " - " + vehicle.type : ""}
+</p>
 
-                            <p>
-                                <strong>₹${vehicle.price_per_day}</strong>
-                                / day
-                            </p>
+                        <p>
+                            <strong>₹${vehicle.price_per_day ?? "N/A"}</strong>
+                            / day
+                        </p>
 
-                            <p>📍 ${vehicle.location || "Not specified"}</p>
+                        <p>📍 ${vehicle.location || "Not specified"}</p>
 
-                            <a
-                                href="vehicle-details.html?id=${vehicle.id}"
-                                class="secondary-btn">
-                                View Details
-                            </a>
-
-                        </div>
+                        <a
+                            href="vehicle-details.html?id=${encodeURIComponent(vehicle.id)}"
+                            class="secondary-btn">
+                            View Details
+                        </a>
 
                     </div>
-                `).join("");
+
+                </div>
+            `).join("");
 
         } catch (error) {
+            console.error("Firestore error:", error);
 
-            console.error(error);
-
-            document.getElementById("availableVehicles").innerHTML =
-                "<p>Unable to load vehicles.</p>";
+            container.innerHTML =
+                "<p>Unable to load vehicles. Please try again.</p>";
         }
     }
 
     loadHomeVehicles();
-
 </script>
-
-<script src="js/common.js"></script>
 
 </body>
 </html>

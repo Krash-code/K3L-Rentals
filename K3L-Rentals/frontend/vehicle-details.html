@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 
@@ -19,61 +20,49 @@
     </div>
 
     <nav>
+        <a href="index.html">Home</a>
+        <a href="vehicles.html">Vehicles</a>
 
-        <a href="index.html">
-            Home
-        </a>
-
-        <a href="vehicles.html">
-            Vehicles
-        </a>
-
-        <a
-            href="my-bookings.html"
-            id="bookingsLink"
-            class="hidden">
+        <a href="my-bookings.html" id="bookingsLink" class="hidden">
             My Bookings
         </a>
 
-        <a
-            href="login.html"
-            id="loginLink">
+        <a href="login.html" id="loginLink">
             Login
         </a>
 
-        <a
-            href="register.html"
-            id="registerLink">
+        <a href="register.html" id="registerLink">
             Register
         </a>
 
-        <button
-            id="logoutBtn"
-            class="nav-btn hidden">
+        <button id="logoutBtn" class="nav-btn hidden">
             Logout
         </button>
-
     </nav>
 
 </header>
 
-
 <section class="details-section">
 
     <div id="vehicleDetails">
-
-        <p>
-            Loading vehicle...
-        </p>
-
+        <p>Loading vehicle...</p>
     </div>
 
 </section>
 
+<!-- Firebase SDK -->
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 
+<!-- Firebase Configuration -->
+<script src="js/firebase-config.js"></script>
+
+<!-- Common JavaScript -->
 <script src="js/common.js"></script>
+
+<!-- Vehicle Details JavaScript -->
 <script src="js/vehicle-details.js"></script>
 
 </body>
-
 </html>

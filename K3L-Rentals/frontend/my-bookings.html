@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 
@@ -17,23 +18,16 @@
     <div class="logo">K3L RENTALS</div>
 
     <nav>
-
         <a href="index.html">Home</a>
-
         <a href="vehicles.html">Vehicles</a>
-
         <a href="my-bookings.html">My Bookings</a>
 
-        <button
-            id="logoutBtn"
-            class="nav-btn">
+        <button id="logoutBtn" class="nav-btn">
             Logout
         </button>
-
     </nav>
 
 </header>
-
 
 <section class="section">
 
@@ -43,16 +37,21 @@
         View your current and previous vehicle bookings.
     </p>
 
-
     <div id="bookingsContainer">
-
         <p>Loading bookings...</p>
-
     </div>
 
 </section>
 
+<!-- Firebase SDK -->
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 
+<!-- Firebase Configuration -->
+<script src="js/firebase-config.js"></script>
+
+<!-- Existing scripts -->
 <script src="js/common.js"></script>
 <script src="js/my-bookings.js"></script>
 
