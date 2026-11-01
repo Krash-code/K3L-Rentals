@@ -1,6 +1,6 @@
-
-const auth = firebase.auth();
-const db = firebase.firestore();
+// K3L Rentals - Admin Customer Management
+var auth = window.auth || (typeof firebase !== "undefined" ? firebase.auth() : null);
+var db = window.db || (typeof firebase !== "undefined" ? firebase.firestore() : null);
 
 let allCustomers = [];
 
@@ -15,79 +15,81 @@ async function checkAdminAccess(user) {
     }
 
     try {
-        const adminDoc = await db
-            .collection("admins")
-            .doc(user.uid)
-            .get();
-
+        const adminDoc = await db.collection("admins").doc(user.uid).get();
         if (!adminDoc.exists) {
             await auth.signOut();
             localStorage.removeItem("user");
+            alert("Admin privileges required.");
             window.location.href = "admin-login.html";
             return false;
         }
-
         return true;
-
     } catch (error) {
         console.error("Admin verification error:", error);
-
-        container.innerHTML = `
-            <div class="info-card">
-                <h3>Unable to verify admin access.</h3>
-                <p>${escapeHtml(error.message)}</p>
-            </div>
-        `;
-
+        if (container) {
+            container.innerHTML = `
+                <div class="info-card">
+                    <h3>Unable to verify admin access</h3>
+                    <p>${escapeHtml(error.message)}</p>
+                </div>
+            `;
+        }
         return false;
     }
 }
 
 // Logout
-document.getElementById("logoutBtn").addEventListener("click", function () {
-    logout();
-});
+const logoutBtn = document.getElementById("logoutBtn");
+if (logoutBtn) {
+    logoutBtn.addEventListener("click", function () {
+        if (typeof logout === "function") {
+            logout();
+        } else {
+            auth.signOut().then(() => {
+                localStorage.removeItem("user");
+                window.location.href = "index.html";
+            });
+        }
+    });
+}
 
-// Search customers
-searchInput.addEventListener("input", filterCustomers);
+// Search input listener
+if (searchInput) {
+    searchInput.addEventListener("input", filterCustomers);
+}
 
 // Load customers from Firestore
 async function loadCustomers() {
     try {
         container.innerHTML = "<p>Loading customers...</p>";
 
-        const snapshot = await db
-            .collection("users")
-            .get();
+        const snapshot = await db.collection("users").get();
 
-        allCustomers = snapshot.docs
-            .map(doc => ({
-                id: doc.id,
-                ...doc.data()
-            }))
-            .filter(customer => customer.role === "customer");
+        allCustomers = snapshot.docs.map(doc => ({
+            id: doc.id,
+            ...doc.data()
+        })).filter(user => (user.role || "customer") === "customer");
 
         displayCustomers(allCustomers);
 
     } catch (error) {
         console.error("Customer loading error:", error);
-
         container.innerHTML = `
             <div class="info-card">
-                <h3>Unable to load customers.</h3>
+                <h3>Unable to load customers</h3>
                 <p>${escapeHtml(error.message)}</p>
             </div>
         `;
     }
 }
 
-// Display customers
+// Display Customers Table
 function displayCustomers(customers) {
     if (customers.length === 0) {
         container.innerHTML = `
             <div class="info-card">
-                <h3>No customers found.</h3>
-                <p>There are currently no customers.</p>
+                <h3>No registered customers found</h3>
+                <p>New user registrations will be listed here.</p>
             </div>
         `;
         return;
@@ -98,28 +100,23 @@ function displayCustomers(customers) {
             <table class="admin-table">
                 <thead>
                     <tr>
-                        <th>ID</th>
-                        <th>Name</th>
-                        <th>Email</th>
-                        <th>Phone</th>
-                        <th>Role</th>
+                        <th>User ID</th>
+                        <th>Full Name</th>
+                        <th>Email Address</th>
+                        <th>Phone Number</th>
+                        <th>Account Role</th>
                     </tr>
                 </thead>
-
                 <tbody>
                     ${customers.map(customer => `
                         <tr>
-                            <td>${escapeHtml(customer.id)}</td>
-
-                            <td>${escapeHtml(customer.name || "N/A")}</td>
-
+                            <td><code>${escapeHtml(customer.id.substring(0, 10))}...</code></td>
+                            <td><strong>${escapeHtml(customer.name || "Customer")}</strong></td>
                             <td>${escapeHtml(customer.email || "N/A")}</td>
-
                             <td>${escapeHtml(customer.phone || "N/A")}</td>
-
                             <td>
-                                <span class="admin-status customer">
-                                    Customer
+                                <span class="admin-status available">
+                                    ${escapeHtml(customer.role || "customer")}
                                 </span>
                             </td>
                         </tr>
@@ -130,26 +127,15 @@ function displayCustomers(customers) {
     `;
 }
 
-// Search customers
+// Filter Customers
 function filterCustomers() {
-    const search = searchInput.value
-        .toLowerCase()
-        .trim();
+    const search = (searchInput?.value || "").toLowerCase().trim();
 
-    const filtered = allCustomers.filter(customer => {
-        return (
-            String(customer.name || "")
-                .toLowerCase()
-                .includes(search) ||
-
-            String(customer.email || "")
-                .toLowerCase()
-                .includes(search) ||
-
-            String(customer.phone || "")
-                .toLowerCase()
-                .includes(search)
-        );
+    const filtered = allCustomers.filter(c => {
+        const name = String(c.name || "").toLowerCase();
+        const email = String(c.email || "").toLowerCase();
+        const phone = String(c.phone || "").toLowerCase();
+        return name.includes(search) || email.includes(search) || phone.includes(search);
     });
 
     displayCustomers(filtered);
@@ -157,7 +143,7 @@ function filterCustomers() {
 
 // Escape HTML
 function escapeHtml(value) {
-    return String(value)
+    return String(value ?? "")
         .replace(/&/g, "&amp;")
         .replace(/</g, "&lt;")
         .replace(/>/g, "&gt;")
@@ -165,11 +151,12 @@ function escapeHtml(value) {
         .replace(/'/g, "&#039;");
 }
 
-// Initial load after authentication
-auth.onAuthStateChanged(async function (user) {
-    const isAdmin = await checkAdminAccess(user);
-
-    if (isAdmin) {
-        await loadCustomers();
-    }
-});
+// Auth state
+if (auth) {
+    auth.onAuthStateChanged(async function (user) {
+        const isAdmin = await checkAdminAccess(user);
+        if (isAdmin) {
+            await loadCustomers();
+        }
+    });
+}

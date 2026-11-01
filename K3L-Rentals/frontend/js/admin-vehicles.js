@@ -1,53 +1,23 @@
+// K3L Rentals - Admin Vehicle Management
+var auth = window.auth || (typeof firebase !== "undefined" ? firebase.auth() : null);
+var db = window.db || (typeof firebase !== "undefined" ? firebase.firestore() : null);
 
-// =====================================
-// FIREBASE
-// =====================================
+// DOM Elements
+const vehicleFormContainer = document.getElementById("vehicleFormContainer");
+const showAddFormBtn = document.getElementById("showAddFormBtn");
+const cancelFormBtn = document.getElementById("cancelFormBtn");
+const vehicleForm = document.getElementById("vehicleForm");
+const formTitle = document.getElementById("formTitle");
+const formMessage = document.getElementById("formMessage");
+const vehicleTableContainer = document.getElementById("vehicleTableContainer");
+const categorySelect = document.getElementById("category");
+const typeSelect = document.getElementById("type");
 
-const db = firebase.firestore();
-const auth = firebase.auth();
-
-
-// =====================================
-// ELEMENTS
-// =====================================
-
-const vehicleFormContainer =
-    document.getElementById("vehicleFormContainer");
-
-const showAddFormBtn =
-    document.getElementById("showAddFormBtn");
-
-const cancelFormBtn =
-    document.getElementById("cancelFormBtn");
-
-const vehicleForm =
-    document.getElementById("vehicleForm");
-
-const formTitle =
-    document.getElementById("formTitle");
-
-const formMessage =
-    document.getElementById("formMessage");
-
-const vehicleTableContainer =
-    document.getElementById("vehicleTableContainer");
-
-const categorySelect =
-    document.getElementById("category");
-
-const typeSelect =
-    document.getElementById("type");
-
-
-// =====================================
-// VEHICLE TYPES
-// =====================================
-
+// Vehicle category mapping
 const vehicleTypes = {
     car: ["SUV", "Sedan", "Hatchback", "MUV", "Luxury", "Van"],
     bike: ["Standard", "Sports", "Cruiser", "Scooter", "Electric"]
 };
-
 
 function updateVehicleTypes(selectedType = "") {
     if (!categorySelect || !typeSelect) return;
@@ -58,19 +28,14 @@ function updateVehicleTypes(selectedType = "") {
     typeSelect.innerHTML = `
         <option value="">Select Type</option>
         ${types.map(type => `
-            <option value="${escapeHTML(type)}"
-                ${type === selectedType ? "selected" : ""}>
+            <option value="${escapeHTML(type)}" ${type === selectedType ? "selected" : ""}>
                 ${escapeHTML(type)}
             </option>
         `).join("")}
     `;
 }
 
-
-// =====================================
-// HTML SAFETY
-// =====================================
-
+// Escape HTML utility
 function escapeHTML(value) {
     return String(value ?? "").replace(/[&<>"']/g, char => ({
         "&": "&amp;",
@@ -81,11 +46,7 @@ function escapeHTML(value) {
     })[char]);
 }
 
-
-// =====================================
-// ADMIN ACCESS CHECK
-// =====================================
-
+// Admin access check
 async function checkAdminAccess(user) {
     if (!user) {
         window.location.href = "admin-login.html";
@@ -93,68 +54,49 @@ async function checkAdminAccess(user) {
     }
 
     try {
-        // Admin must have a manually provisioned trusted record
-        const adminDoc = await db
-            .collection("admins")
-            .doc(user.uid)
-            .get();
-
+        const adminDoc = await db.collection("admins").doc(user.uid).get();
         if (!adminDoc.exists) {
             await auth.signOut();
             localStorage.removeItem("user");
-
-            alert("You do not have admin access.");
+            alert("Administrative privileges required.");
             window.location.href = "admin-login.html";
             return false;
         }
-
         return true;
-
     } catch (error) {
         console.error("Admin verification error:", error);
-
-        alert("Unable to verify admin access. Check Firestore rules.");
+        alert("Unable to verify admin access: " + error.message);
         return false;
     }
 }
 
-
-// =====================================
-// LOGOUT
-// =====================================
-
+// Logout
 const logoutBtn = document.getElementById("logoutBtn");
-
 if (logoutBtn) {
-    logoutBtn.addEventListener("click", logout);
-}
-
-
-// =====================================
-// SHOW ADD FORM
-// =====================================
-
-if (showAddFormBtn) {
-    showAddFormBtn.addEventListener("click", function () {
-        resetForm();
-
-        formTitle.textContent = "Add Vehicle";
-        vehicleFormContainer.classList.remove("hidden");
-
-        updateVehicleTypes();
-
-        window.scrollTo({
-            top: 0,
-            behavior: "smooth"
-        });
+    logoutBtn.addEventListener("click", function () {
+        if (typeof logout === "function") {
+            logout();
+        } else {
+            auth.signOut().then(() => {
+                localStorage.removeItem("user");
+                window.location.href = "index.html";
+            });
+        }
     });
 }
 
+// Show Add Form
+if (showAddFormBtn) {
+    showAddFormBtn.addEventListener("click", function () {
+        resetForm();
+        formTitle.textContent = "Add New Vehicle";
+        vehicleFormContainer.classList.remove("hidden");
+        updateVehicleTypes();
+        window.scrollTo({ top: 0, behavior: "smooth" });
+    });
+}
 
-// =====================================
-// CANCEL FORM
-// =====================================
-
+// Cancel Form
 if (cancelFormBtn) {
     cancelFormBtn.addEventListener("click", function () {
         vehicleFormContainer.classList.add("hidden");
@@ -162,46 +104,34 @@ if (cancelFormBtn) {
     });
 }
 
-
-// =====================================
-// CATEGORY CHANGE
-// =====================================
-
+// Category Change
 if (categorySelect) {
     categorySelect.addEventListener("change", function () {
         updateVehicleTypes();
     });
 }
 
-
-// =====================================
-// RESET FORM
-// =====================================
-
 function resetForm() {
-    vehicleForm.reset();
-
-    document.getElementById("vehicleId").value = "";
-
+    if (vehicleForm) vehicleForm.reset();
+    const vIdElem = document.getElementById("vehicleId");
+    if (vIdElem) vIdElem.value = "";
     if (categorySelect) {
         categorySelect.value = "car";
         updateVehicleTypes();
     }
-
-    formMessage.textContent = "";
-    formMessage.style.color = "";
+    if (formMessage) {
+        formMessage.textContent = "";
+        formMessage.style.color = "";
+    }
 }
 
-
-// =====================================
-// LOAD VEHICLES
-// =====================================
-
+// Load Vehicles from Firestore
 async function loadVehicles() {
+    if (!vehicleTableContainer) return;
+
     try {
-        const snapshot = await db
-            .collection("vehicles")
-            .get();
+        vehicleTableContainer.innerHTML = "<p>Loading vehicles...</p>";
+        const snapshot = await db.collection("vehicles").get();
 
         const vehicles = snapshot.docs.map(doc => ({
             id: doc.id,
@@ -212,26 +142,22 @@ async function loadVehicles() {
 
     } catch (error) {
         console.error("Load vehicles error:", error);
-
         vehicleTableContainer.innerHTML = `
             <div class="info-card">
-                <h3>Unable to load vehicles.</h3>
-                <p>Check your Firestore permissions.</p>
+                <h3>Unable to load vehicles</h3>
+                <p>${escapeHTML(error.message)}</p>
             </div>
         `;
     }
 }
 
-
-// =====================================
-// DISPLAY VEHICLES
-// =====================================
-
+// Display Vehicles in Table
 function displayVehicles(vehicles) {
     if (vehicles.length === 0) {
         vehicleTableContainer.innerHTML = `
             <div class="info-card">
-                <h3>No vehicles found.</h3>
+                <h3>No vehicles registered yet</h3>
+                <p>Click the "+ Add Vehicle" button above to add your first fleet asset.</p>
             </div>
         `;
         return;
@@ -242,50 +168,40 @@ function displayVehicles(vehicles) {
             <table class="admin-table">
                 <thead>
                     <tr>
-                        <th>Vehicle Number</th>
+                        <th>Registration No.</th>
                         <th>Category</th>
                         <th>Model</th>
                         <th>Type</th>
                         <th>Location</th>
-                        <th>Price / Day</th>
+                        <th>Rate / Day</th>
                         <th>Status</th>
                         <th>Actions</th>
                     </tr>
                 </thead>
-
                 <tbody>
                     ${vehicles.map(vehicle => {
-                        const category = String(
-                            vehicle.category || "car"
-                        ).toLowerCase();
-
+                        const category = String(vehicle.category || "car").toLowerCase();
                         const icon = category === "bike" ? "🏍️" : "🚗";
+                        const statusClass = String(vehicle.status || "available").toLowerCase().replace(/[\s-]/g, "_");
 
                         return `
                             <tr>
-                                <td>${escapeHTML(vehicle.vehicle_number || "N/A")}</td>
-                                <td>${icon} ${escapeHTML(category)}</td>
+                                <td><strong>${escapeHTML(vehicle.vehicle_number || "N/A")}</strong></td>
+                                <td>${icon} ${escapeHTML(category.toUpperCase())}</td>
                                 <td>${escapeHTML(vehicle.model || "N/A")}</td>
                                 <td>${escapeHTML(vehicle.type || "N/A")}</td>
-                                <td>${escapeHTML(vehicle.location || "N/A")}</td>
-                                <td>₹${escapeHTML(vehicle.price_per_day ?? "N/A")}</td>
+                                <td>📍 ${escapeHTML(vehicle.location || "N/A")}</td>
+                                <td>₹${Number(vehicle.price_per_day || 0).toLocaleString("en-IN")}</td>
                                 <td>
-                                    <span class="admin-status">
-                                        ${escapeHTML(vehicle.status || "N/A")}
+                                    <span class="admin-status ${statusClass}">
+                                        ${escapeHTML(vehicle.status || "available")}
                                     </span>
                                 </td>
                                 <td>
-                                    <button
-                                        class="table-btn edit-btn"
-                                        data-action="edit"
-                                        data-id="${escapeHTML(vehicle.id)}">
+                                    <button class="table-btn edit-btn" data-action="edit" data-id="${escapeHTML(vehicle.id)}">
                                         Edit
                                     </button>
-
-                                    <button
-                                        class="table-btn delete-btn"
-                                        data-action="delete"
-                                        data-id="${escapeHTML(vehicle.id)}">
+                                    <button class="table-btn delete-btn" data-action="delete" data-id="${escapeHTML(vehicle.id)}">
                                         Delete
                                     </button>
                                 </td>
@@ -297,33 +213,23 @@ function displayVehicles(vehicles) {
         </div>
     `;
 
-    // Handle Edit and Delete buttons
-    vehicleTableContainer.querySelectorAll("button[data-action]")
-        .forEach(button => {
-            button.addEventListener("click", function () {
-                const id = this.dataset.id;
-
-                if (this.dataset.action === "edit") {
-                    editVehicle(id);
-                } else if (this.dataset.action === "delete") {
-                    deleteVehicle(id);
-                }
-            });
+    // Bind Edit and Delete buttons
+    vehicleTableContainer.querySelectorAll("button[data-action]").forEach(button => {
+        button.addEventListener("click", function () {
+            const id = this.dataset.id;
+            if (this.dataset.action === "edit") {
+                editVehicle(id);
+            } else if (this.dataset.action === "delete") {
+                deleteVehicle(id);
+            }
         });
+    });
 }
 
-
-// =====================================
-// EDIT VEHICLE
-// =====================================
-
+// Edit Vehicle
 async function editVehicle(id) {
     try {
-        const doc = await db
-            .collection("vehicles")
-            .doc(id)
-            .get();
-
+        const doc = await db.collection("vehicles").doc(id).get();
         if (!doc.exists) {
             alert("Vehicle not found.");
             return;
@@ -332,194 +238,127 @@ async function editVehicle(id) {
         const vehicle = doc.data();
 
         document.getElementById("vehicleId").value = doc.id;
-        document.getElementById("vehicle_number").value =
-            vehicle.vehicle_number || "";
+        document.getElementById("vehicle_number").value = vehicle.vehicle_number || "";
+        document.getElementById("model").value = vehicle.model || "";
 
-        document.getElementById("model").value =
-            vehicle.model || "";
+        if (categorySelect) {
+            categorySelect.value = String(vehicle.category || "car").toLowerCase();
+            updateVehicleTypes(vehicle.type || "");
+        }
 
-        categorySelect.value =
-            String(vehicle.category || "car").toLowerCase();
+        document.getElementById("price_per_day").value = vehicle.price_per_day ?? "";
+        document.getElementById("location").value = vehicle.location || "Coimbatore";
+        document.getElementById("status").value = String(vehicle.status || "available").toLowerCase();
+        document.getElementById("image").value = vehicle.image || "";
 
-        updateVehicleTypes(vehicle.type || "");
-
-        document.getElementById("price_per_day").value =
-            vehicle.price_per_day ?? "";
-
-        document.getElementById("location").value =
-            vehicle.location || "";
-
-        document.getElementById("status").value =
-            String(vehicle.status || "available").toLowerCase();
-
-        document.getElementById("image").value =
-            vehicle.image || "";
-
-        formTitle.textContent = "Edit Vehicle";
+        formTitle.textContent = "Edit Vehicle (" + (vehicle.vehicle_number || "Asset") + ")";
         formMessage.textContent = "";
 
         vehicleFormContainer.classList.remove("hidden");
-
-        window.scrollTo({
-            top: 0,
-            behavior: "smooth"
-        });
+        window.scrollTo({ top: 0, behavior: "smooth" });
 
     } catch (error) {
         console.error("Edit vehicle error:", error);
-        alert("Unable to load vehicle. Check Firestore permissions.");
+        alert("Unable to load vehicle details: " + error.message);
     }
 }
 
+// Save or Update Vehicle
+if (vehicleForm) {
+    vehicleForm.addEventListener("submit", async function (event) {
+        event.preventDefault();
 
-// =====================================
-// SAVE VEHICLE
-// =====================================
+        const id = document.getElementById("vehicleId").value;
+        const category = categorySelect ? categorySelect.value : "car";
+        const price = Number(document.getElementById("price_per_day").value);
 
-vehicleForm.addEventListener("submit", async function (event) {
-    event.preventDefault();
+        const vehicleData = {
+            category: category,
+            vehicle_number: document.getElementById("vehicle_number").value.trim().toUpperCase(),
+            model: document.getElementById("model").value.trim(),
+            type: typeSelect ? typeSelect.value : "Standard",
+            price_per_day: price,
+            location: document.getElementById("location").value.trim(),
+            status: document.getElementById("status").value,
+            image: document.getElementById("image").value.trim()
+        };
 
-    const id = document.getElementById("vehicleId").value;
+        if (
+            !vehicleData.category ||
+            !vehicleData.vehicle_number ||
+            !vehicleData.model ||
+            !vehicleData.location ||
+            !vehicleData.status ||
+            !Number.isFinite(price) ||
+            price <= 0
+        ) {
+            formMessage.textContent = "Please fill in all required fields with valid values.";
+            formMessage.style.color = "red";
+            return;
+        }
 
-    const category = categorySelect.value;
-    const price = Number(
-        document.getElementById("price_per_day").value
-    );
+        const submitButton = vehicleForm.querySelector('button[type="submit"]');
+        if (submitButton) submitButton.disabled = true;
 
-    const vehicleData = {
-        category: category,
+        formMessage.textContent = "Saving vehicle record...";
+        formMessage.style.color = "black";
 
-        vehicle_number: document.getElementById("vehicle_number")
-            .value.trim().toUpperCase(),
-
-        model: document.getElementById("model")
-            .value.trim(),
-
-        type: typeSelect.value,
-
-        price_per_day: price,
-
-        location: document.getElementById("location")
-            .value.trim(),
-
-        status: document.getElementById("status").value,
-
-        image: document.getElementById("image")
-            .value.trim()
-    };
-
-    if (
-        !vehicleData.category ||
-        !vehicleData.vehicle_number ||
-        !vehicleData.model ||
-        !vehicleData.type ||
-        !vehicleData.location ||
-        !vehicleData.status ||
-        !Number.isFinite(price) ||
-        price <= 0
-    ) {
-        formMessage.textContent =
-            "Please fill in all fields with valid values.";
-
-        formMessage.style.color = "red";
-        return;
-    }
-
-    const submitButton = vehicleForm.querySelector(
-        'button[type="submit"]'
-    );
-
-    if (submitButton) {
-        submitButton.disabled = true;
-    }
-
-    formMessage.textContent = "Saving vehicle...";
-    formMessage.style.color = "black";
-
-    try {
-        if (id) {
-            // Update existing vehicle
-            await db.collection("vehicles")
-                .doc(id)
-                .update({
+        try {
+            if (id) {
+                // Update
+                await db.collection("vehicles").doc(id).update({
                     ...vehicleData,
                     updatedAt: firebase.firestore.FieldValue.serverTimestamp()
                 });
-
-        } else {
-            // Add new vehicle
-            await db.collection("vehicles")
-                .add({
+                formMessage.textContent = "Vehicle updated successfully!";
+            } else {
+                // Add
+                await db.collection("vehicles").add({
                     ...vehicleData,
                     createdAt: firebase.firestore.FieldValue.serverTimestamp()
                 });
+                formMessage.textContent = "Vehicle added to fleet successfully!";
+            }
+
+            formMessage.style.color = "green";
+            await loadVehicles();
+
+            setTimeout(function () {
+                vehicleFormContainer.classList.add("hidden");
+                resetForm();
+            }, 600);
+
+        } catch (error) {
+            console.error("Save vehicle error:", error);
+            formMessage.textContent = "Failed to save vehicle: " + error.message;
+            formMessage.style.color = "red";
+        } finally {
+            if (submitButton) submitButton.disabled = false;
         }
+    });
+}
 
-        formMessage.textContent = id
-            ? "Vehicle updated successfully!"
-            : "Vehicle added successfully!";
-
-        formMessage.style.color = "green";
-
-        await loadVehicles();
-
-        setTimeout(function () {
-            vehicleFormContainer.classList.add("hidden");
-            resetForm();
-        }, 700);
-
-    } catch (error) {
-        console.error("Save vehicle error:", error);
-
-        formMessage.textContent =
-            "Unable to save vehicle. Check admin permissions.";
-
-        formMessage.style.color = "red";
-
-    } finally {
-        if (submitButton) {
-            submitButton.disabled = false;
-        }
-    }
-});
-
-
-// =====================================
-// DELETE VEHICLE
-// =====================================
-
+// Delete Vehicle
 async function deleteVehicle(id) {
-    const confirmed = confirm(
-        "Are you sure you want to delete this vehicle?"
-    );
-
+    const confirmed = confirm("Are you sure you want to permanently delete this vehicle from the fleet?");
     if (!confirmed) return;
 
     try {
-        await db.collection("vehicles")
-            .doc(id)
-            .delete();
-
+        await db.collection("vehicles").doc(id).delete();
         alert("Vehicle deleted successfully.");
-
         await loadVehicles();
-
     } catch (error) {
         console.error("Delete vehicle error:", error);
-
-        alert("Unable to delete vehicle. Check admin permissions.");
+        alert("Unable to delete vehicle: " + error.message);
     }
 }
 
-
-// =====================================
-// INITIAL LOAD
-// =====================================
-
-auth.onAuthStateChanged(async function (user) {
-    const isAdmin = await checkAdminAccess(user);
-
-    if (isAdmin) {
-        await loadVehicles();
-    }
-});
+// Auth state init
+if (auth) {
+    auth.onAuthStateChanged(async function (user) {
+        const isAdmin = await checkAdminAccess(user);
+        if (isAdmin) {
+            await loadVehicles();
+        }
+    });
+}

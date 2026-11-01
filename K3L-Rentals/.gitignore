@@ -1,7 +1,12 @@
 .env
+backend/.env
 node_modules/
 
 # Firebase generated files
 .firebase/
 .agents/
 skills-lock.json
+
+# Exclude sensitive seed files & local configs
+frontend/admin-seed.html
+.config/

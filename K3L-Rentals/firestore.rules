@@ -1,0 +1,102 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Helper functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function isAdmin() {
+      return isAuthenticated() && exists(/databases/$(database)/documents/admins/$(request.auth.uid));
+    }
+
+    // ----------------------------------------------------
+    // USERS COLLECTION (Customer Profiles)
+    // ----------------------------------------------------
+    match /users/{userId} {
+      allow read: if isOwner(userId) || isAdmin();
+
+      allow create: if (isAuthenticated() &&
+        request.auth.uid == userId &&
+        request.resource.data.get('role', 'customer') == 'customer') ||
+        isAdmin();
+
+      allow update: if (isOwner(userId) &&
+        request.resource.data.get('role', 'customer') == resource.data.get('role', 'customer')) ||
+        isAdmin();
+
+      allow delete: if isAdmin();
+    }
+
+    // ----------------------------------------------------
+    // ADMINS COLLECTION (Trusted RBAC - Read-only from client)
+    // ----------------------------------------------------
+    match /admins/{adminId} {
+      allow read: if isAuthenticated() && (request.auth.uid == adminId || isAdmin());
+      allow write: if false;
+    }
+
+    // ----------------------------------------------------
+    // VEHICLES COLLECTION (Fleet Catalog)
+    // ----------------------------------------------------
+    match /vehicles/{vehicleId} {
+      allow read: if true;
+      allow create, delete, update: if isAdmin();
+
+      // Public date schedules for date-based availability & conflict detection
+      match /schedules/{scheduleId} {
+        allow read: if true;
+
+        allow create: if (isAuthenticated() &&
+          request.resource.data.userId == request.auth.uid &&
+          request.resource.data.start_date is string &&
+          request.resource.data.end_date is string &&
+          request.resource.data.end_date > request.resource.data.start_date) || isAdmin();
+
+        allow update: if (isAuthenticated() && resource.data.userId == request.auth.uid &&
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'updatedAt']) &&
+          request.resource.data.status == 'Cancelled') || isAdmin();
+
+        allow delete: if isAdmin();
+      }
+    }
+
+    // ----------------------------------------------------
+    // BOOKINGS COLLECTION (Private Customer Reservations)
+    // ----------------------------------------------------
+    match /bookings/{bookingId} {
+      allow read: if (isAuthenticated() && resource.data.userId == request.auth.uid) || isAdmin();
+
+      allow create: if (isAuthenticated() &&
+        request.resource.data.userId == request.auth.uid &&
+        request.resource.data.rental_days > 0 &&
+        request.resource.data.total_amount > 0 &&
+        request.resource.data.start_date is string &&
+        request.resource.data.end_date is string &&
+        request.resource.data.end_date > request.resource.data.start_date) || isAdmin();
+
+      allow update: if (isAuthenticated() && resource.data.userId == request.auth.uid &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'updatedAt']) &&
+        request.resource.data.status == 'Cancelled') || isAdmin();
+
+      allow delete: if isAdmin();
+    }
+
+    // ----------------------------------------------------
+    // MAINTENANCE COLLECTION (Operational Fleet Service)
+    // ----------------------------------------------------
+    match /maintenance/{maintenanceId} {
+      allow read, write: if isAdmin();
+    }
+
+    // Deny all other collections by default
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

@@ -1,8 +1,8 @@
+// K3L Rentals - Admin Dashboard Analytics
+var auth = window.auth || (typeof firebase !== "undefined" ? firebase.auth() : null);
+var db = window.db || (typeof firebase !== "undefined" ? firebase.firestore() : null);
 
-const auth = firebase.auth();
-const db = firebase.firestore();
-
-// Check admin access
+// Check admin authorization
 async function checkAdminAccess(user) {
     if (!user) {
         window.location.href = "admin-login.html";
@@ -10,10 +10,7 @@ async function checkAdminAccess(user) {
     }
 
     try {
-        const adminDoc = await db
-            .collection("admins")
-            .doc(user.uid)
-            .get();
+        const adminDoc = await db.collection("admins").doc(user.uid).get();
 
         if (!adminDoc.exists) {
             await auth.signOut();
@@ -27,19 +24,29 @@ async function checkAdminAccess(user) {
     } catch (error) {
         console.error("Admin verification error:", error);
         alert("Unable to verify admin access. Check Firestore rules.");
+        window.location.href = "admin-login.html";
         return false;
     }
 }
 
 // Logout
-document.getElementById("logoutBtn").addEventListener("click", function () {
-    logout();
-});
+const logoutBtn = document.getElementById("logoutBtn");
+if (logoutBtn) {
+    logoutBtn.addEventListener("click", function () {
+        if (typeof logout === "function") {
+            logout();
+        } else {
+            auth.signOut().then(() => {
+                localStorage.removeItem("user");
+                window.location.href = "index.html";
+            });
+        }
+    });
+}
 
-// Load dashboard statistics
+// Load real-time dashboard statistics from Firestore
 async function loadDashboardStats() {
     try {
-        // Fetch Firestore collections
         const [
             vehiclesSnapshot,
             bookingsSnapshot,
@@ -50,68 +57,61 @@ async function loadDashboardStats() {
             db.collection("users").get()
         ]);
 
-        const vehicles = vehiclesSnapshot.docs.map(doc => doc.data());
-        const bookings = bookingsSnapshot.docs.map(doc => doc.data());
-        const customers = usersSnapshot.docs.map(doc => doc.data());
+        const vehicles = vehiclesSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        const bookings = bookingsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        const users = usersSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 
-        // Vehicle statistics
+        // Status normalization helper
+        const norm = (val) => String(val || "").toLowerCase().trim().replace(/[\s-]/g, "_");
+
+        // Real-time Vehicle Status Counts
         const totalVehicles = vehicles.length;
+        const available = vehicles.filter(v => norm(v.status) === "available").length;
+        const booked = vehicles.filter(v => norm(v.status) === "booked").length;
+        const maintenance = vehicles.filter(v => norm(v.status) === "maintenance").length;
+        const inUse = vehicles.filter(v => ["in_use", "inuse"].includes(norm(v.status))).length;
 
-        const available = vehicles.filter(vehicle =>
-            ["available", "Available"].includes(vehicle.status)
-        ).length;
-
-        const booked = vehicles.filter(vehicle =>
-            ["booked", "Booked"].includes(vehicle.status)
-        ).length;
-
-        const maintenance = vehicles.filter(vehicle =>
-            ["maintenance", "Maintenance"].includes(vehicle.status)
-        ).length;
-
-        const inUse = vehicles.filter(vehicle =>
-            ["in_use", "In Use"].includes(vehicle.status)
-        ).length;
-
-        // Booking and customer statistics
+        // Customer & Booking metrics
         const totalBookings = bookings.length;
-        const totalCustomers = customers.filter(
-            customer => customer.role === "customer"
-        ).length;
+        const totalCustomers = users.filter(u => (u.role || "customer") === "customer").length;
 
-        // Revenue from completed bookings
+        // Revenue from completed or confirmed bookings
         const totalRevenue = bookings
-            .filter(booking =>
-                ["completed", "Completed"].includes(booking.status)
-            )
-            .reduce((total, booking) => {
-                return total + (Number(booking.total_amount) || 0);
-            }, 0);
+            .filter(b => ["completed", "confirmed"].includes(norm(b.status)))
+            .reduce((sum, b) => sum + (Number(b.total_amount) || 0), 0);
 
-        // Display values
-        document.getElementById("totalVehicles").textContent = totalVehicles;
-        document.getElementById("available").textContent = available;
-        document.getElementById("booked").textContent = booked;
-        document.getElementById("maintenance").textContent = maintenance;
-        document.getElementById("inUse").textContent = inUse;
-        document.getElementById("totalBookings").textContent = totalBookings;
-        document.getElementById("totalCustomers").textContent = totalCustomers;
+        // Update DOM elements safely
+        const setVal = (id, val) => {
+            const el = document.getElementById(id);
+            if (el) el.textContent = val;
+        };
 
-        document.getElementById("totalRevenue").textContent =
-            `₹${totalRevenue.toLocaleString("en-IN")}`;
+        setVal("totalVehicles", totalVehicles);
+        setVal("available", available);
+        setVal("booked", booked);
+        setVal("maintenance", maintenance);
+        setVal("inUse", inUse);
+        setVal("totalBookings", totalBookings);
+        setVal("totalCustomers", totalCustomers);
+        setVal("totalRevenue", `₹${totalRevenue.toLocaleString("en-IN")}`);
 
     } catch (error) {
         console.error("Dashboard loading error:", error);
-
-        alert("Unable to load dashboard statistics: " + error.message);
+        const container = document.querySelector(".dashboard-grid") || document.body;
+        const errBanner = document.createElement("div");
+        errBanner.className = "info-card";
+        errBanner.style.borderLeft = "4px solid #e53e3e";
+        errBanner.innerHTML = `<p style="color:#e53e3e;">Failed to load stats: ${error.message}</p>`;
+        container.prepend(errBanner);
     }
 }
 
-// Wait for Firebase authentication
-auth.onAuthStateChanged(async function (user) {
-    const isAdmin = await checkAdminAccess(user);
-
-    if (isAdmin) {
-        await loadDashboardStats();
-    }
-});
+// Authentication state listener
+if (auth) {
+    auth.onAuthStateChanged(async function (user) {
+        const isAdmin = await checkAdminAccess(user);
+        if (isAdmin) {
+            await loadDashboardStats();
+        }
+    });
+}

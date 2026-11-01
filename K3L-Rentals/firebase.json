@@ -4,7 +4,11 @@
     "ignore": [
       "firebase.json",
       "**/.*",
-      "**/node_modules/**"
+      "**/node_modules/**",
+      "admin-seed.html"
     ]
+  },
+  "firestore": {
+    "rules": "firestore.rules"
   }
 }

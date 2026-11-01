@@ -1,4 +1,4 @@
-
+// Firebase Configuration for K3L Rentals
 const firebaseConfig = {
   apiKey: "AIzaSyDcVHD6NXM2MNkiNBlOR6ovdRg_OiHTdsU",
   authDomain: "k3l-rentals-13ff0.firebaseapp.com",
@@ -9,7 +9,13 @@ const firebaseConfig = {
   measurementId: "G-SH2R5NEF00"
 };
 
-firebase.initializeApp(firebaseConfig);
+// Initialize Firebase once
+if (typeof firebase !== "undefined" && !firebase.apps.length) {
+  firebase.initializeApp(firebaseConfig);
+}
 
-const auth = firebase.auth();
-const db = firebase.firestore();
+// Provide shared global references
+window.auth = typeof firebase !== "undefined" ? firebase.auth() : null;
+window.db = typeof firebase !== "undefined" ? firebase.firestore() : null;
+var auth = window.auth;
+var db = window.db;

@@ -2,124 +2,67 @@
 <html lang="en">
 
 <head>
-
     <meta charset="UTF-8">
-
-    <meta
-        name="viewport"
-        content="width=device-width, initial-scale=1.0">
-
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Vehicles - K3L Rentals</title>
-
-    <link
-        rel="stylesheet"
-        href="css/style.css">
-
+    <link rel="stylesheet" href="css/style.css">
 </head>
-
 
 <body>
 
-
 <header class="navbar">
-
     <div class="logo">
         K3L RENTALS
     </div>
 
-
     <nav>
-
-        <a href="index.html">
-            Home
-        </a>
-
-        <a href="vehicles.html">
-            Vehicles
-        </a>
-
-        <a
-            href="my-bookings.html"
-            id="bookingsLink"
-            class="hidden">
-
-            My Bookings
-
-        </a>
-
-        <a
-            href="login.html"
-            id="loginLink">
-
-            Login
-
-        </a>
-
-        <a
-            href="register.html"
-            id="registerLink">
-
-            Register
-
-        </a>
-
-        <button
-            id="logoutBtn"
-            class="nav-btn hidden">
-
-            Logout
-
-        </button>
-
+        <a href="index.html">Home</a>
+        <a href="vehicles.html">Vehicles</a>
+        <a href="my-bookings.html" id="bookingsLink" class="hidden">My Bookings</a>
+        <a href="login.html" id="loginLink">Login</a>
+        <a href="register.html" id="registerLink">Register</a>
+        <button id="logoutBtn" class="nav-btn hidden">Logout</button>
     </nav>
-
 </header>
 
-
-
 <section class="section">
-
-    <h1>
-        Available Vehicles
-    </h1>
-
+    <h1>Browse Vehicles</h1>
     <p class="section-subtitle">
-        Choose a vehicle for your journey.
+        Explore our verified fleet of cars and bikes across Coimbatore, Erode, and Salem.
     </p>
 
+    <div class="filter-bar" style="display:flex; flex-wrap:wrap; gap:12px; align-items:center;">
+        <input type="text" id="searchInput" placeholder="Search model, number, or city..." style="flex:1; min-width:200px;">
 
-    <div class="filter-bar">
-
-        <input
-            type="text"
-            id="searchInput"
-            placeholder="Search vehicles...">
-
-
-        <select id="typeFilter">
-
-            <option value="all">
-                All Types
-            </option>
-
+        <select id="categoryFilter" style="min-width:140px;">
+            <option value="all">All Categories</option>
+            <option value="car">🚗 Cars</option>
+            <option value="bike">🏍️ Bikes</option>
         </select>
 
+        <select id="typeFilter" style="min-width:140px;">
+            <option value="all">All Types</option>
+        </select>
+
+        <!-- Date-based availability filter -->
+        <div style="display:flex; align-items:center; gap:6px; background:#f7fafc; padding:4px 10px; border-radius:6px; border:1px solid #e2e8f0;">
+            <label for="filterStartDate" style="font-size:0.85rem; font-weight:600; color:#4a5568; margin:0;">From:</label>
+            <input type="date" id="filterStartDate" style="padding:6px 10px; border:1px solid #cbd5e0; border-radius:4px; font-size:0.85rem;">
+            <label for="filterEndDate" style="font-size:0.85rem; font-weight:600; color:#4a5568; margin:0;">To:</label>
+            <input type="date" id="filterEndDate" style="padding:6px 10px; border:1px solid #cbd5e0; border-radius:4px; font-size:0.85rem;">
+        </div>
+
+        <button id="clearFiltersBtn" class="secondary-btn" style="padding:8px 14px; font-size:0.85rem;">
+            Clear Filters
+        </button>
     </div>
 
+    <div id="filterStatusMessage" style="margin: 8px 0; font-size: 0.9rem; color: #4a5568;"></div>
 
-    <div
-        id="vehicleContainer"
-        class="vehicle-grid">
-
-        <p>
-            Loading vehicles...
-        </p>
-
+    <div id="vehicleContainer" class="vehicle-grid">
+        <p>Loading fleet vehicles...</p>
     </div>
-
 </section>
-
-
 
 <!-- Firebase SDK -->
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
@@ -134,5 +77,4 @@
 <script src="js/vehicles.js"></script>
 
 </body>
-
 </html>
