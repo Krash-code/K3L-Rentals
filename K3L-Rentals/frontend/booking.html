@@ -4,65 +4,147 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
     <title>Book Vehicle - K3L Rentals</title>
-
     <link rel="stylesheet" href="css/style.css">
 </head>
 
 <body>
 
 <header class="navbar">
-
     <div class="logo">
-        K3L RENTALS
+        🚗 K3L <span>RENTALS</span>
     </div>
-
     <nav>
         <a href="index.html">Home</a>
         <a href="vehicles.html">Vehicles</a>
-
-        <a href="my-bookings.html" id="bookingsLink">
-            My Bookings
-        </a>
-
-        <button id="logoutBtn" class="nav-btn">
-            Logout
-        </button>
+        <a href="my-bookings.html" id="bookingsLink">My Bookings</a>
+        <span id="userGreeting" style="font-size: 0.9rem; color: #93c5fd; margin: 0 8px;"></span>
+        <button id="logoutBtn" class="nav-btn">Logout</button>
     </nav>
-
 </header>
 
 <div class="booking-container">
-
     <div class="booking-card">
+        <h1>Reserve Your Vehicle</h1>
+        <p class="subtitle" style="color: var(--slate-600); margin-bottom: 20px;">
+            Complete your reservation request in 4 easy steps: select dates, upload verification documents, await admin approval, and pay 25% advance.
+        </p>
 
-        <h1>Book Your Vehicle</h1>
-
-        <div id="vehicleSummary">
-            <p>Loading vehicle...</p>
+        <!-- Upfront Rules Callout Banner -->
+        <div style="background: #eff6ff; border: 1px solid #bfdbfe; border-radius: var(--radius-md); padding: 16px; margin-bottom: 24px;">
+            <h4 style="color: #1e40af; margin-bottom: 8px; font-size: 0.95rem; display: flex; align-items: center; gap: 6px;">
+                📋 Rental Policies &amp; Verification Rules
+            </h4>
+            <ul style="margin-left: 20px; font-size: 0.85rem; color: #1e3a8a; line-height: 1.6;">
+                <li><strong>Age Requirement:</strong> Minimum 18 years old. Valid Driving Licence required at pickup.</li>
+                <li><strong>Rental Duration:</strong> 1 to 7 consecutive days maximum per booking.</li>
+                <li><strong>Document Verification:</strong> Aadhaar OR PAN Card + Driving Licence verified by staff.</li>
+                <li><strong>Advance Deposit:</strong> Exactly 25% advance payment required upon document approval to confirm vehicle lock. Remaining 75% at pickup.</li>
+            </ul>
         </div>
 
-        <form id="bookingForm">
+        <!-- Email Verification Alert Gate (Hidden if verified) -->
+        <div id="emailGateBanner" style="display: none; background: #fffbeb; border: 1px solid #fde68a; padding: 16px; border-radius: var(--radius-md); margin-bottom: 24px;">
+            <h4 style="color: #92400e; margin-bottom: 6px;">⚠️ Email Verification Required to Reserve</h4>
+            <p style="font-size: 0.88rem; color: #78350f; margin-bottom: 12px;">
+                Your account email (<span id="gateUserEmail" style="font-weight: 600;"></span>) has not been verified yet. We require a verified email to accept vehicle reservation requests.
+            </p>
+            <div style="display: flex; gap: 10px; flex-wrap: wrap; align-items: center;">
+                <button id="gateResendBtn" class="outline-btn" style="padding: 6px 14px; font-size: 0.82rem;">
+                    Resend Verification Email
+                </button>
+                <button id="gateCheckStatusBtn" class="primary-btn" style="padding: 6px 14px; font-size: 0.82rem;">
+                    I have verified (Refresh Status)
+                </button>
+                <span id="gateActionStatus" style="font-size: 0.82rem; font-weight: 500;"></span>
+            </div>
+        </div>
 
-            <label for="start_date">Start Date</label>
-            <input type="date" id="start_date" required>
+        <!-- Vehicle Summary Card -->
+        <div id="vehicleSummary">
+            <p>Loading vehicle information...</p>
+        </div>
 
-            <label for="end_date">End Date</label>
-            <input type="date" id="end_date" required>
+        <!-- Booking & Document Form -->
+        <form id="bookingForm" style="display: none; margin-top: 24px;">
 
-            <div id="priceEstimate"></div>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px;">
+                <div class="form-group">
+                    <label for="start_date">Rental Start Date *</label>
+                    <input type="date" id="start_date" required>
+                </div>
 
-            <button type="submit" class="primary-btn">
-                Confirm Booking
+                <div class="form-group">
+                    <label for="end_date">Rental End Date *</label>
+                    <input type="date" id="end_date" required>
+                </div>
+            </div>
+
+            <!-- Price Breakdown Box -->
+            <div id="priceEstimate" style="margin: 16px 0;"></div>
+
+            <!-- Document Upload Section -->
+            <div style="background: var(--surface-alt); border: 1px solid var(--slate-200); border-radius: var(--radius-md); padding: 20px; margin: 20px 0;">
+                <h3 style="font-size: 1.1rem; color: var(--slate-900); margin-bottom: 6px;">
+                    🪪 Identity &amp; Driving Licence Verification
+                </h3>
+                <p style="font-size: 0.85rem; color: var(--slate-600); margin-bottom: 16px;">
+                    Upload clear photos or scans of your documents for manual admin verification before booking approval.
+                </p>
+
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 20px;">
+                    <!-- ID Proof (Aadhaar or PAN) -->
+                    <div class="form-group">
+                        <label for="idTypeSelect">Select ID Proof Type *</label>
+                        <select id="idTypeSelect" required style="padding: 10px; border: 1px solid var(--slate-300); border-radius: 6px;">
+                            <option value="Aadhaar Card">Aadhaar Card (Front/Both sides)</option>
+                            <option value="PAN Card">PAN Card</option>
+                        </select>
+
+                        <label for="idDocInput" style="margin-top: 10px;">Upload ID Proof Document *</label>
+                        <input type="file" id="idDocInput" accept="image/*,.pdf" required style="font-size: 0.85rem;">
+                        <small style="color: var(--slate-500); font-size: 0.78rem;">Max size 5MB (JPG, PNG, WebP)</small>
+
+                        <!-- ID Preview container -->
+                        <div id="idDocPreview" style="margin-top: 8px; display: none;">
+                            <img src="" alt="ID Preview" style="max-height: 140px; border-radius: 6px; border: 1px solid var(--slate-300); object-fit: cover;">
+                            <span style="font-size: 0.75rem; color: #16a34a; display: block; margin-top: 4px;">✓ Image loaded &amp; compressed</span>
+                        </div>
+                    </div>
+
+                    <!-- Driving Licence -->
+                    <div class="form-group">
+                        <label for="dlDocInput">Upload Driving Licence (DL) *</label>
+                        <input type="file" id="dlDocInput" accept="image/*,.pdf" required style="font-size: 0.85rem; margin-top: 4px;">
+                        <small style="color: var(--slate-500); font-size: 0.78rem;">Front side showing licence number &amp; validity</small>
+
+                        <!-- DL Preview container -->
+                        <div id="dlDocPreview" style="margin-top: 8px; display: none;">
+                            <img src="" alt="DL Preview" style="max-height: 140px; border-radius: 6px; border: 1px solid var(--slate-300); object-fit: cover;">
+                            <span style="font-size: 0.75rem; color: #16a34a; display: block; margin-top: 4px;">✓ Licence loaded &amp; compressed</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Mandatory Retention Consent Checkbox -->
+                <div style="margin-top: 18px; padding-top: 14px; border-top: 1px solid var(--slate-200);">
+                    <label style="display: flex; align-items: flex-start; gap: 10px; font-size: 0.85rem; color: var(--slate-700); cursor: pointer;">
+                        <input type="checkbox" id="consentCheckbox" required style="margin-top: 3px; width: 16px; height: 16px; cursor: pointer;">
+                        <span>
+                            <strong>Mandatory Verification Consent:</strong> I confirm that I am at least 18 years old and hold a valid, non-expired driving licence. I agree to K3L Rentals processing my submitted documents strictly for vehicle rental verification and compliance with Motor Vehicles Act regulations.
+                        </span>
+                    </label>
+                </div>
+            </div>
+
+            <!-- Submit Button -->
+            <button type="submit" id="submitBookingBtn" class="primary-btn" style="width: 100%; padding: 14px; font-size: 1.05rem;">
+                Submit Booking Request for Verification
             </button>
-
         </form>
 
-        <div id="bookingMessage"></div>
-
+        <div id="bookingMessage" style="margin-top: 20px;"></div>
     </div>
-
 </div>
 
 <!-- Firebase SDK -->
@@ -70,11 +152,10 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 
-<!-- Firebase Configuration -->
 <script src="js/firebase-config.js"></script>
-
-<!-- Existing JavaScript -->
 <script src="js/common.js"></script>
+<script src="js/notifications.js"></script>
+<script src="js/chatbot.js"></script>
 <script src="js/booking.js"></script>
 
 </body>

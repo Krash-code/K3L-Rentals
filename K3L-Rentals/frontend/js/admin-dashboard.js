@@ -1,8 +1,8 @@
-// K3L Rentals - Admin Dashboard Analytics
+// K3L Rentals - Admin Dashboard Analytics & Metrics Engine
 var auth = window.auth || (typeof firebase !== "undefined" ? firebase.auth() : null);
 var db = window.db || (typeof firebase !== "undefined" ? firebase.firestore() : null);
 
-// Check admin authorization
+// Check admin authorization via /admins/{uid}
 async function checkAdminAccess(user) {
     if (!user) {
         window.location.href = "admin-login.html";
@@ -29,21 +29,6 @@ async function checkAdminAccess(user) {
     }
 }
 
-// Logout
-const logoutBtn = document.getElementById("logoutBtn");
-if (logoutBtn) {
-    logoutBtn.addEventListener("click", function () {
-        if (typeof logout === "function") {
-            logout();
-        } else {
-            auth.signOut().then(() => {
-                localStorage.removeItem("user");
-                window.location.href = "index.html";
-            });
-        }
-    });
-}
-
 // Load real-time dashboard statistics from Firestore
 async function loadDashboardStats() {
     try {
@@ -61,23 +46,28 @@ async function loadDashboardStats() {
         const bookings = bookingsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
         const users = usersSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 
-        // Status normalization helper
         const norm = (val) => String(val || "").toLowerCase().trim().replace(/[\s-]/g, "_");
 
-        // Real-time Vehicle Status Counts
+        // Vehicle metrics
         const totalVehicles = vehicles.length;
         const available = vehicles.filter(v => norm(v.status) === "available").length;
         const booked = vehicles.filter(v => norm(v.status) === "booked").length;
         const maintenance = vehicles.filter(v => norm(v.status) === "maintenance").length;
         const inUse = vehicles.filter(v => ["in_use", "inuse"].includes(norm(v.status))).length;
 
-        // Customer & Booking metrics
+        // Booking & Verification pipeline metrics
+        const pendingDocs = bookings.filter(b => norm(b.verification_status) === "pending_review" || (norm(b.status) === "pending_review" && norm(b.verification_status) !== "approved")).length;
+        const pendingPayments = bookings.filter(b => norm(b.payment_status) === "pending_verification").length;
+        const activeTrips = bookings.filter(b => ["active", "in_use", "inuse"].includes(norm(b.status))).length;
+        const completedTrips = bookings.filter(b => norm(b.status) === "completed").length;
         const totalBookings = bookings.length;
+
+        // Customer count
         const totalCustomers = users.filter(u => (u.role || "customer") === "customer").length;
 
-        // Revenue from completed or confirmed bookings
+        // Revenue calculation (total from confirmed, active, completed)
         const totalRevenue = bookings
-            .filter(b => ["completed", "confirmed"].includes(norm(b.status)))
+            .filter(b => ["completed", "confirmed", "active"].includes(norm(b.status)))
             .reduce((sum, b) => sum + (Number(b.total_amount) || 0), 0);
 
         // Update DOM elements safely
@@ -86,12 +76,15 @@ async function loadDashboardStats() {
             if (el) el.textContent = val;
         };
 
+        setVal("pendingDocsCount", pendingDocs);
+        setVal("pendingPaymentsCount", pendingPayments);
+        setVal("activeTripsCount", activeTrips);
         setVal("totalVehicles", totalVehicles);
         setVal("available", available);
-        setVal("booked", booked);
+        setVal("booked", booked + inUse);
         setVal("maintenance", maintenance);
-        setVal("inUse", inUse);
         setVal("totalBookings", totalBookings);
+        setVal("completedTrips", completedTrips);
         setVal("totalCustomers", totalCustomers);
         setVal("totalRevenue", `₹${totalRevenue.toLocaleString("en-IN")}`);
 
@@ -101,7 +94,7 @@ async function loadDashboardStats() {
         const errBanner = document.createElement("div");
         errBanner.className = "info-card";
         errBanner.style.borderLeft = "4px solid #e53e3e";
-        errBanner.innerHTML = `<p style="color:#e53e3e;">Failed to load stats: ${error.message}</p>`;
+        errBanner.innerHTML = `<p style="color:#e53e3e;">Failed to load statistics: ${error.message}</p>`;
         container.prepend(errBanner);
     }
 }

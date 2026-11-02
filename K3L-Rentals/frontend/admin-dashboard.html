@@ -2,385 +2,189 @@
 <html lang="en">
 
 <head>
-
     <meta charset="UTF-8">
-
-    <meta
-        name="viewport"
-        content="width=device-width, initial-scale=1.0">
-
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Admin Dashboard - K3L Rentals</title>
-
-    <link
-        rel="stylesheet"
-        href="css/style.css">
-
+    <link rel="stylesheet" href="css/style.css">
+    <style>
+        .metric-card-interactive {
+            cursor: pointer;
+            transition: var(--transition);
+        }
+        .metric-card-interactive:hover {
+            transform: translateY(-3px);
+            box-shadow: var(--shadow-md);
+        }
+        .urgent-card {
+            border-left: 4px solid #f59e0b;
+            background: linear-gradient(180deg, #fffbeb 0%, white 100%);
+        }
+        .payment-card {
+            border-left: 4px solid #2563eb;
+            background: linear-gradient(180deg, #eff6ff 0%, white 100%);
+        }
+    </style>
 </head>
-
 
 <body>
 
-
 <header class="navbar">
-
     <div class="logo">
-        K3L RENTALS
+        🚗 K3L <span>ADMIN</span>
     </div>
-
-
     <nav>
-
-        <a href="admin-dashboard.html">
-            Dashboard
-        </a>
-
-        <a href="admin-vehicles.html">
-            Vehicles
-        </a>
-
-        <a href="admin-bookings.html">
-            Bookings
-        </a>
-
-        <a href="admin-customers.html">
-            Customers
-        </a>
-
-        <a href="admin-fleet.html">
-            Fleet
-        </a>
-
-        <a href="admin-maintenance.html">
-            Maintenance
-        </a>
-
-        <a href="admin-reports.html">
-            Reports
-        </a>
-
-        <button
-            id="logoutBtn"
-            class="nav-btn">
-
-            Logout
-
-        </button>
-
+        <a href="admin-dashboard.html" style="color: #60a5fa; font-weight: 600;">Dashboard</a>
+        <a href="admin-verification.html">Verification</a>
+        <a href="admin-bookings.html">Bookings</a>
+        <a href="admin-vehicles.html">Vehicles</a>
+        <a href="admin-fleet.html">Fleet</a>
+        <a href="admin-maintenance.html">Maintenance</a>
+        <a href="admin-reports.html">Reports</a>
+        <button id="logoutBtn" class="nav-btn">Logout</button>
     </nav>
-
 </header>
 
-
-
 <section class="section">
+    <div class="admin-page-header">
+        <div>
+            <h1>Executive Fleet &amp; Operations Dashboard</h1>
+            <p class="section-subtitle">
+                Real-time metrics, document review pipeline, advance payment collections, and fleet distribution.
+            </p>
+        </div>
+        <div>
+            <a href="admin-verification.html" class="primary-btn" style="padding: 10px 18px; font-size: 0.92rem;">
+                🪪 Process Verification Requests →
+            </a>
+        </div>
+    </div>
 
+    <!-- Quick Action / Urgent Pipeline Counters -->
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px; margin-bottom: 24px;">
+        <div class="dashboard-card urgent-card metric-card-interactive" onclick="window.location.href='admin-verification.html'">
+            <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+                <div>
+                    <h3 style="color: #92400e;">🪪 Pending Document Review</h3>
+                    <p style="font-size: 0.8rem; color: #b45309;">Awaiting customer ID / DL approval</p>
+                </div>
+                <span id="pendingDocsCount" class="dashboard-number" style="color: #d97706; font-size: 2rem;">--</span>
+            </div>
+        </div>
 
-    <h1>
-        Admin Dashboard
-    </h1>
+        <div class="dashboard-card payment-card metric-card-interactive" onclick="window.location.href='admin-verification.html'">
+            <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+                <div>
+                    <h3 style="color: #1e40af;">💳 Advance Payments Pending</h3>
+                    <p style="font-size: 0.8rem; color: #2563eb;">Customer submitted 25% UPI UTR</p>
+                </div>
+                <span id="pendingPaymentsCount" class="dashboard-number" style="color: #2563eb; font-size: 2rem;">--</span>
+            </div>
+        </div>
 
+        <div class="dashboard-card metric-card-interactive" style="border-left: 4px solid #10b981;" onclick="window.location.href='admin-bookings.html'">
+            <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+                <div>
+                    <h3 style="color: #065f46;">🔑 Active Handover / Trips</h3>
+                    <p style="font-size: 0.8rem; color: #047857;">Vehicles currently on the road</p>
+                </div>
+                <span id="activeTripsCount" class="dashboard-number" style="color: #10b981; font-size: 2rem;">--</span>
+            </div>
+        </div>
+    </div>
 
-    <p class="section-subtitle">
-        K3L Rentals management overview
-    </p>
-
-
-
+    <!-- Comprehensive Operational Metrics Grid -->
     <div class="dashboard-grid">
-
-
-        <!-- Total Vehicles -->
-
         <div class="dashboard-card">
-
-            <h3>
-                Total Vehicles
-            </h3>
-
-            <p
-                id="totalVehicles"
-                class="dashboard-number">
-
-                --
-
-            </p>
-
+            <h3>Total Fleet Vehicles</h3>
+            <p id="totalVehicles" class="dashboard-number">--</p>
         </div>
 
-
-
-        <!-- Available -->
-
         <div class="dashboard-card">
-
-            <h3>
-                Available
-            </h3>
-
-            <p
-                id="available"
-                class="dashboard-number">
-
-                --
-
-            </p>
-
+            <h3>Available for Booking</h3>
+            <p id="available" class="dashboard-number" style="color: #10b981;">--</p>
         </div>
 
-
-
-        <!-- Booked -->
-
         <div class="dashboard-card">
-
-            <h3>
-                Booked
-            </h3>
-
-            <p
-                id="booked"
-                class="dashboard-number">
-
-                --
-
-            </p>
-
+            <h3>Reserved / Booked</h3>
+            <p id="booked" class="dashboard-number" style="color: #f59e0b;">--</p>
         </div>
 
-
-
-        <!-- Maintenance -->
-
         <div class="dashboard-card">
-
-            <h3>
-                Maintenance
-            </h3>
-
-            <p
-                id="maintenance"
-                class="dashboard-number">
-
-                --
-
-            </p>
-
+            <h3>Maintenance / Service</h3>
+            <p id="maintenance" class="dashboard-number" style="color: #ef4444;">--</p>
         </div>
 
-
-
-        <!-- In Use -->
-
         <div class="dashboard-card">
-
-            <h3>
-                In Use
-            </h3>
-
-            <p
-                id="inUse"
-                class="dashboard-number">
-
-                --
-
-            </p>
-
+            <h3>Total Bookings Logged</h3>
+            <p id="totalBookings" class="dashboard-number">--</p>
         </div>
 
-
-
-        <!-- Bookings -->
-
         <div class="dashboard-card">
-
-            <h3>
-                Total Bookings
-            </h3>
-
-            <p
-                id="totalBookings"
-                class="dashboard-number">
-
-                --
-
-            </p>
-
+            <h3>Completed Trips</h3>
+            <p id="completedTrips" class="dashboard-number">--</p>
         </div>
 
-
-
-        <!-- Customers -->
-
         <div class="dashboard-card">
-
-            <h3>
-                Customers
-            </h3>
-
-            <p
-                id="totalCustomers"
-                class="dashboard-number">
-
-                --
-
-            </p>
-
+            <h3>Registered Customers</h3>
+            <p id="totalCustomers" class="dashboard-number">--</p>
         </div>
 
-
-
-        <!-- Revenue -->
-
         <div class="dashboard-card">
-
-            <h3>
-                Total Revenue
-            </h3>
-
-            <p
-                id="totalRevenue"
-                class="dashboard-number">
-
-                ₹--
-
-            </p>
-
+            <h3>Total Gross Revenue</h3>
+            <p id="totalRevenue" class="dashboard-number" style="color: #2563eb;">₹--</p>
         </div>
-
-
     </div>
 
-
-
-    <div class="admin-actions">
-
-
-        <h2>
-            Management
-        </h2>
-
-
+    <!-- Management Portal Links -->
+    <div class="admin-actions" style="margin-top: 36px;">
+        <h2>Operational Control Modules</h2>
         <div class="admin-action-grid">
-
-
-            <a
-                href="admin-vehicles.html"
-                class="admin-action-card">
-
-                <h3>
-                    Vehicles
-                </h3>
-
-                <p>
-                    Add, edit and delete vehicles.
-                </p>
-
+            <a href="admin-verification.html" class="admin-action-card" style="border-color: #bfdbfe; background: #f0f7ff;">
+                <h3>🪪 Verification &amp; Payments</h3>
+                <p>Verify customer Aadhaar/PAN, Driving Licence, and approve 25% advance UPI payments.</p>
             </a>
 
-
-
-            <a
-                href="admin-bookings.html"
-                class="admin-action-card">
-
-                <h3>
-                    Bookings
-                </h3>
-
-                <p>
-                    View and manage bookings.
-                </p>
-
+            <a href="admin-bookings.html" class="admin-action-card">
+                <h3>📅 Bookings &amp; Handover</h3>
+                <p>Manage all reservations, perform 4-angle photo inspections, and track vehicle returns.</p>
             </a>
 
-
-
-            <a
-                href="admin-customers.html"
-                class="admin-action-card">
-
-                <h3>
-                    Customers
-                </h3>
-
-                <p>
-                    View registered customers.
-                </p>
-
+            <a href="admin-vehicles.html" class="admin-action-card">
+                <h3>🚗 Vehicle Catalog</h3>
+                <p>Add new vehicles, update rental rates, configure transmission &amp; vehicle specifications.</p>
             </a>
 
-
-
-            <a
-                href="admin-fleet.html"
-                class="admin-action-card">
-
-                <h3>
-                    Fleet
-                </h3>
-
-                <p>
-                    Manage vehicle status and location.
-                </p>
-
+            <a href="admin-fleet.html" class="admin-action-card">
+                <h3>📍 Fleet Hubs &amp; Locations</h3>
+                <p>Manage vehicles across Coimbatore, Erode, and Salem regional hubs.</p>
             </a>
 
-
-
-            <a
-                href="admin-maintenance.html"
-                class="admin-action-card">
-
-                <h3>
-                    Maintenance
-                </h3>
-
-                <p>
-                    Manage vehicle servicing.
-                </p>
-
+            <a href="admin-maintenance.html" class="admin-action-card">
+                <h3>🔧 Maintenance &amp; Servicing</h3>
+                <p>Schedule oil changes, tire rotations, and manage out-of-service fleet records.</p>
             </a>
 
-
-
-            <a
-                href="admin-reports.html"
-                class="admin-action-card">
-
-                <h3>
-                    Reports
-                </h3>
-
-                <p>
-                    View system reports.
-                </p>
-
+            <a href="admin-customers.html" class="admin-action-card">
+                <h3>👥 Customer Accounts</h3>
+                <p>View verified customers, age compliance records, and account statuses.</p>
             </a>
 
-
+            <a href="admin-reports.html" class="admin-action-card">
+                <h3>📊 Reports &amp; Financials</h3>
+                <p>Export revenue metrics, fleet utilization percentages, and booking history logs.</p>
+            </a>
         </div>
-
     </div>
-
-
 </section>
-
-
-
 
 <!-- Firebase SDK -->
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 
-<!-- Firebase Configuration -->
 <script src="js/firebase-config.js"></script>
-
-<!-- Existing JavaScript -->
 <script src="js/common.js"></script>
 <script src="js/admin-dashboard.js"></script>
 
-
 </body>
-
 </html>

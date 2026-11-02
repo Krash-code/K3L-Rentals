@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Active Vehicle Tracking - K3L Rentals Admin</title>
+    <link rel="stylesheet" href="css/style.css">
+    <style>
+        .tracking-card {
+            background: white;
+            border: 1px solid var(--slate-200);
+            border-radius: var(--radius-lg);
+            padding: 20px;
+            margin-bottom: 16px;
+            box-shadow: var(--shadow-sm);
+        }
+        .tracking-status-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 4px 10px;
+            border-radius: var(--radius-full);
+            font-size: 0.78rem;
+            font-weight: 600;
+        }
+        .tracking-status-pill.live {
+            background: #ecfdf5;
+            color: #065f46;
+            border: 1px solid #a7f3d0;
+        }
+        .tracking-status-pill.live::before {
+            content: "";
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #10b981;
+            box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.3);
+            animation: pulse 1.5s infinite;
+        }
+        .tracking-status-pill.offline {
+            background: #f1f5f9;
+            color: #475569;
+            border: 1px solid #cbd5e1;
+        }
+        .tracking-status-pill.denied {
+            background: #fef2f2;
+            color: #991b1b;
+            border: 1px solid #fecaca;
+        }
+        @keyframes pulse {
+            0% { transform: scale(0.95); opacity: 0.8; }
+            50% { transform: scale(1.2); opacity: 1; }
+            100% { transform: scale(0.95); opacity: 0.8; }
+        }
+    </style>
+</head>
+
+<body>
+
+<header class="navbar">
+    <div class="logo">
+        🚗 K3L <span>ADMIN</span>
+    </div>
+    <nav>
+        <a href="admin-dashboard.html">Dashboard</a>
+        <a href="admin-verification.html">Verification</a>
+        <a href="admin-bookings.html">Bookings</a>
+        <a href="admin-tracking.html" style="color: #60a5fa; font-weight: 600;">Live Tracking</a>
+        <a href="admin-vehicles.html">Vehicles</a>
+        <a href="admin-fleet.html">Fleet</a>
+        <a href="admin-maintenance.html">Maintenance</a>
+        <a href="admin-reports.html">Reports</a>
+        <button id="logoutBtn" class="nav-btn">Logout</button>
+    </nav>
+</header>
+
+<main class="section">
+    <div class="admin-page-header">
+        <div>
+            <h1>Active Trip Live Tracking</h1>
+            <p class="section-subtitle">
+                Consent-based browser GPS location updates for active customer rentals.
+            </p>
+        </div>
+        <button id="refreshTrackingBtn" class="primary-btn">
+            🔄 Refresh Status
+        </button>
+    </div>
+
+    <!-- Technical Disclosure Notice -->
+    <div style="background: #eff6ff; border: 1px solid #bfdbfe; border-radius: var(--radius-md); padding: 14px 18px; margin-bottom: 24px; font-size: 0.85rem; color: #1e40af; line-height: 1.5;">
+        <strong>📡 Technology Scope &amp; Privacy Disclosures:</strong>
+        <ul style="margin-left: 18px; margin-top: 4px;">
+            <li><strong>Method:</strong> Voluntary HTML5 browser geolocation shared by customer during active rental.</li>
+            <li><strong>Operating Constraint:</strong> Requires active web session. Updates pause when customer device locks, backgrounds browser, or loses mobile signal.</li>
+            <li><strong>Hardware Scope:</strong> This represents voluntary web app location telemetry, not dedicated vehicle hardware GPS/OBD-II telematics.</li>
+            <li><strong>Lifecycle Boundary:</strong> Telemetry is strictly restricted to active trips (after pickup, before return) and is completely disabled upon trip completion.</li>
+        </ul>
+    </div>
+
+    <div id="trackingContainer">
+        <p>Loading active rental tracking data...</p>
+    </div>
+</main>
+
+<!-- Firebase SDK -->
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+
+<script src="js/firebase-config.js"></script>
+<script src="js/common.js"></script>
+<script src="js/admin-tracking.js"></script>
+
+</body>
+</html>

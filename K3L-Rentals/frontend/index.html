@@ -3,196 +3,149 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>K3L Rentals</title>
+    <title>K3L Rentals - Premium Car &amp; Bike Rentals in Tamil Nadu</title>
     <link rel="stylesheet" href="css/style.css">
 </head>
 
 <body>
 
 <header class="navbar">
-
     <div class="logo">
-        K3L RENTALS
+        🚗 K3L <span>RENTALS</span>
     </div>
-
     <nav>
-
-        <a href="index.html">
-            Home
-        </a>
-
-        <a href="vehicles.html">
-            Vehicles
-        </a>
-
-        <a
-            href="my-bookings.html"
-            id="bookingsLink"
-            class="hidden">
-
-            My Bookings
-
-        </a>
-
-        <a
-            href="login.html"
-            id="loginLink">
-
-            Login
-
-        </a>
-
-        <a
-            href="register.html"
-            id="registerLink">
-
-            Register
-
-        </a>
-
-        <button
-            id="logoutBtn"
-            class="nav-btn hidden">
-
-            Logout
-
-        </button>
-
+        <a href="index.html">Home</a>
+        <a href="vehicles.html">Vehicles</a>
+        <a href="my-bookings.html" id="bookingsLink" class="hidden">My Bookings</a>
+        <a href="login.html" id="loginLink">Login</a>
+        <a href="register.html" id="registerLink">Register</a>
+        <span id="userGreeting" style="font-size: 0.9rem; color: #93c5fd; margin: 0 8px;"></span>
+        <button id="logoutBtn" class="nav-btn hidden">Logout</button>
     </nav>
-
 </header>
 
 <section class="hero">
-
     <div class="hero-content">
-        <h1>Rent. Ride. Return.</h1>
-
+        <h1>Rent. Ride. Explore.</h1>
         <p>
-            Find the right vehicle for your journey.
-            Simple booking, flexible rides and reliable vehicles.
+            Experience premium car and bike rentals across Coimbatore, Erode, and Salem.
+            Transparent 25% advance pricing, verified documents, and well-maintained vehicles.
         </p>
+        <div class="hero-actions">
+            <a href="vehicles.html" class="primary-btn" style="font-size: 1.05rem; padding: 12px 24px;">
+                Browse Fleet Catalog
+            </a>
+            <a href="register.html" class="secondary-btn" style="font-size: 1.05rem; padding: 12px 24px;">
+                Create Account (18+)
+            </a>
+        </div>
+    </div>
+</section>
 
-        <a href="vehicles.html" class="primary-btn">
-            Browse Vehicles
+<!-- Upfront Policies & Features Highlight -->
+<section style="background: white; padding: 40px 8%; border-bottom: 1px solid var(--slate-200);">
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 24px;">
+        <div class="feature-card" style="padding: 20px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px;">
+            <div style="font-size: 2rem; margin-bottom: 8px;">🪪</div>
+            <h3 style="font-size: 1.1rem; margin-bottom: 6px; color: #0f172a;">Age 18+ &amp; Verified DL</h3>
+            <p style="font-size: 0.88rem; color: #475569; line-height: 1.5;">
+                Safe &amp; legal rentals with quick online Aadhaar/PAN and Driving Licence verification before vehicle dispatch.
+            </p>
+        </div>
+
+        <div class="feature-card" style="padding: 20px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px;">
+            <div style="font-size: 2rem; margin-bottom: 8px;">⏱️</div>
+            <h3 style="font-size: 1.1rem; margin-bottom: 6px; color: #0f172a;">1 to 7 Days Flexible Rental</h3>
+            <p style="font-size: 0.88rem; color: #475569; line-height: 1.5;">
+                From daily city errands to week-long Western Ghats road trips, rent comfortably with zero long-term commitments.
+            </p>
+        </div>
+
+        <div class="feature-card" style="padding: 20px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px;">
+            <div style="font-size: 2rem; margin-bottom: 8px;">💳</div>
+            <h3 style="font-size: 1.1rem; margin-bottom: 6px; color: #0f172a;">Exact 25% Advance</h3>
+            <p style="font-size: 0.88rem; color: #475569; line-height: 1.5;">
+                Lock your reservation securely with a 25% advance via instant UPI. Settle the remaining 75% balance upon vehicle pickup.
+            </p>
+        </div>
+
+        <div class="feature-card" style="padding: 20px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px;">
+            <div style="font-size: 2rem; margin-bottom: 8px;">📍</div>
+            <h3 style="font-size: 1.1rem; margin-bottom: 6px; color: #0f172a;">Coimbatore • Erode • Salem</h3>
+            <p style="font-size: 0.88rem; color: #475569; line-height: 1.5;">
+                Convenient pickup and drop-off hubs across major transportation terminals in Western Tamil Nadu.
+            </p>
+        </div>
+    </div>
+</section>
+
+<!-- Available Vehicles Section -->
+<section class="section">
+    <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 24px; flex-wrap: wrap; gap: 12px;">
+        <div>
+            <h2>Featured Available Vehicles</h2>
+            <p class="section-subtitle">
+                Reserve your ride online with instant date-availability verification.
+            </p>
+        </div>
+        <a href="vehicles.html" class="secondary-btn">
+            View All Vehicles →
         </a>
     </div>
 
+    <div id="availableVehicles" class="vehicle-grid">
+        <p>Loading fleet vehicles...</p>
+    </div>
 </section>
 
-
-<section class="section">
-
-    <h2>Available Vehicles</h2>
-
-    <p class="section-subtitle">
-        Choose from our available vehicles and start your journey.
+<!-- Popular Vehicle Categories -->
+<section class="section" style="background: #f8fafc; border-top: 1px solid var(--slate-200);">
+    <h2>Vehicles for Every Journey</h2>
+    <p class="section-subtitle" style="margin-bottom: 24px;">
+        Tailored options whether you're climbing the Nilgiris or zipping through city streets.
     </p>
 
-    <div id="availableVehicles" class="vehicle-grid">
-        <p>Loading vehicles...</p>
-    </div>
-
-</section>
-
-
-<section class="section">
-
-    <h2>Popular Vehicles</h2>
-
     <div class="vehicle-grid">
-
         <div class="info-card">
-            <h3>🚗 Comfortable Cars</h3>
-            <p>
-                Perfect for city travel, family trips and everyday journeys.
+            <h3 style="margin-bottom: 8px;">🚗 Premium Sedans &amp; Hatchbacks</h3>
+            <p style="color: var(--slate-600); font-size: 0.9rem; line-height: 1.5;">
+                Fuel efficient, smooth, and comfortable for city commutes and family visits across town.
             </p>
         </div>
 
         <div class="info-card">
-            <h3>🚙 SUVs</h3>
-            <p>
-                More space and comfort for long-distance travel.
+            <h3 style="margin-bottom: 8px;">🚙 Rugged SUVs &amp; 7-Seaters</h3>
+            <p style="color: var(--slate-600); font-size: 0.9rem; line-height: 1.5;">
+                High ground clearance, ample luggage room, and strong climbing power for Ooty and Kodaikanal.
             </p>
         </div>
 
         <div class="info-card">
-            <h3>🏍️ Flexible Rides</h3>
-            <p>
-                Choose a vehicle that matches your travel needs.
+            <h3 style="margin-bottom: 8px;">🏍️ Roadsters &amp; Commuter Bikes</h3>
+            <p style="color: var(--slate-600); font-size: 0.9rem; line-height: 1.5;">
+                Royal Enfields and scooters ready for weekend road trips and quick city errands.
             </p>
         </div>
-
     </div>
-
 </section>
 
-
-<section class="section">
-
-    <h2>How It Works</h2>
-
-    <div class="steps">
-
-        <div class="step">
-            <span>1</span>
-            <h3>Choose</h3>
-            <p>Browse available vehicles.</p>
+<!-- Footer -->
+<footer style="background: var(--slate-900); color: var(--slate-400); padding: 40px 8%; font-size: 0.9rem; border-top: 1px solid rgba(255,255,255,0.08);">
+    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 20px;">
+        <div>
+            <div style="font-weight: 800; font-size: 1.2rem; color: white; margin-bottom: 6px;">
+                🚗 K3L RENTALS
+            </div>
+            <p style="font-size: 0.85rem; max-width: 400px;">
+                College Cloud Computing Project • Autonomous vehicle reservation management system operating within Firebase Spark Free Plan.
+            </p>
         </div>
-
-        <div class="step">
-            <span>2</span>
-            <h3>Book</h3>
-            <p>Select your rental dates.</p>
+        <div style="text-align: right;">
+            <p><a href="admin-login.html" style="color: #60a5fa; text-decoration: underline;">Admin Portal Login</a></p>
+            <p style="margin-top: 4px; font-size: 0.8rem;">Coimbatore • Erode • Salem, Tamil Nadu</p>
         </div>
-
-        <div class="step">
-            <span>3</span>
-            <h3>Ride</h3>
-            <p>Pick up your vehicle and enjoy your journey.</p>
-        </div>
-
-        <div class="step">
-            <span>4</span>
-            <h3>Return</h3>
-            <p>Return the vehicle after your trip.</p>
-        </div>
-
     </div>
-
-</section>
-
-
-<section class="section why-section">
-
-    <h2>Why K3L Rentals?</h2>
-
-    <div class="vehicle-grid">
-
-        <div class="info-card">
-            <h3>✓ Easy Booking</h3>
-            <p>Book your vehicle through a simple online process.</p>
-        </div>
-
-        <div class="info-card">
-            <h3>✓ Reliable Vehicles</h3>
-            <p>Choose from vehicles maintained by our fleet team.</p>
-        </div>
-
-        <div class="info-card">
-            <h3>✓ Transparent Pricing</h3>
-            <p>Know the rental price before confirming your booking.</p>
-        </div>
-
-    </div>
-
-</section>
-
-
-<footer>
-    <p>© 2026 K3L Rentals. All rights reserved.</p>
 </footer>
-
-
 
 <!-- Firebase SDK -->
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
@@ -202,8 +155,10 @@
 <!-- Firebase configuration -->
 <script src="js/firebase-config.js"></script>
 
-<!-- Existing common JavaScript -->
+<!-- Scripts -->
 <script src="js/common.js"></script>
+<script src="js/notifications.js"></script>
+<script src="js/chatbot.js"></script>
 
 <script>
     async function loadHomeVehicles() {
@@ -224,54 +179,42 @@
             );
 
             if (available.length === 0) {
-                container.innerHTML =
-                    "<p>No vehicles currently available.</p>";
+                container.innerHTML = "<p>No vehicles currently available.</p>";
                 return;
             }
 
-            container.innerHTML = available.slice(0, 3).map(vehicle => `
-                <div class="vehicle-card">
+            container.innerHTML = available.slice(0, 4).map(vehicle => {
+                const category = String(vehicle.category || "car").toLowerCase();
+                const icon = category === "bike" ? "🏍️" : "🚗";
+                return `
+                    <div class="vehicle-card">
+                        <div class="vehicle-image">
+                            ${vehicle.image
+                                ? `<img src="${vehicle.image}" alt="${vehicle.model || "Vehicle"}" onerror="this.style.display='none'">`
+                                : `<span style="font-size:4rem;">${icon}</span>`}
+                        </div>
 
-                    <div class="vehicle-image">
-                        ${vehicle.image
-                            ? `<img src="${vehicle.image}" alt="${vehicle.model || "Vehicle"}">`
-                            : "🚗"}
+                        <div class="vehicle-info">
+                            <h3>${vehicle.model || "Vehicle"}</h3>
+                            <p>${icon} ${category.toUpperCase()} ${vehicle.type ? " • " + vehicle.type : ""}</p>
+                            <p><strong>Registration:</strong> ${vehicle.vehicle_number || "N/A"}</p>
+                            <p>📍 ${vehicle.location || "Coimbatore"}</p>
+                            <p><strong>₹${Number(vehicle.price_per_day || 0).toLocaleString("en-IN")}</strong> / day</p>
+
+                            <div style="margin-top: 12px; display: flex; justify-content: space-between; align-items: center;">
+                                <span class="admin-status available">Available</span>
+                                <a href="vehicle-details.html?id=${encodeURIComponent(vehicle.id)}" class="secondary-btn">
+                                    View Details
+                                </a>
+                            </div>
+                        </div>
                     </div>
-
-                    <div class="vehicle-info">
-
-                        <h3>${vehicle.model || "Vehicle"}</h3>
-
-                        <p>
-    ${String(vehicle.category || "").toLowerCase() === "bike"
-        ? "🏍️ Bike"
-        : "🚗 Car"}
-    ${vehicle.type ? " - " + vehicle.type : ""}
-</p>
-
-                        <p>
-                            <strong>₹${vehicle.price_per_day ?? "N/A"}</strong>
-                            / day
-                        </p>
-
-                        <p>📍 ${vehicle.location || "Not specified"}</p>
-
-                        <a
-                            href="vehicle-details.html?id=${encodeURIComponent(vehicle.id)}"
-                            class="secondary-btn">
-                            View Details
-                        </a>
-
-                    </div>
-
-                </div>
-            `).join("");
+                `;
+            }).join("");
 
         } catch (error) {
             console.error("Firestore error:", error);
-
-            container.innerHTML =
-                "<p>Unable to load vehicles. Please try again.</p>";
+            container.innerHTML = "<p>Unable to load vehicles. Please try again.</p>";
         }
     }
 

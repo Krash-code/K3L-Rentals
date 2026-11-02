@@ -1,4 +1,4 @@
-// K3L Rentals - Public Vehicle Catalog & Date-Based Availability Engine
+// K3L Rentals - Public Vehicle Catalog, Date-Based Availability & Sorting Engine
 var db = window.db || (typeof firebase !== "undefined" ? firebase.firestore() : null);
 
 let allVehicles = [];
@@ -103,7 +103,6 @@ function createTypeFilter() {
 function isVehicleAvailableForDates(vehicleId, startDate, endDate) {
     if (!startDate || !endDate) return true;
     const schedules = vehicleSchedulesMap.get(vehicleId) || [];
-    // If any confirmed schedule overlaps: bStart < endDate && bEnd > startDate
     for (const s of schedules) {
         if (s.start_date < endDate && s.end_date > startDate) {
             return false;
@@ -128,10 +127,10 @@ function displayVehicles(vehicles, isDateFiltered = false, startDate = "", endDa
 
     if (vehicles.length === 0) {
         container.innerHTML = `
-            <div class="info-card" style="grid-column: 1 / -1; text-align: center; padding: 32px;">
-                <h3>No vehicles match your criteria</h3>
-                <p>No vehicles are available matching your active search, category, or date range.</p>
-                <button onclick="clearAllFilters()" class="primary-btn" style="margin-top: 12px;">
+            <div class="info-card" style="grid-column: 1 / -1; text-align: center; padding: 40px 20px;">
+                <h3>No vehicles match your active criteria</h3>
+                <p style="color: var(--slate-600); margin-top: 6px;">Try adjusting your search terms, category, or selected dates.</p>
+                <button onclick="clearAllFilters()" class="primary-btn" style="margin-top: 14px;">
                     Reset Filters
                 </button>
             </div>
@@ -149,7 +148,7 @@ function displayVehicles(vehicles, isDateFiltered = false, startDate = "", endDa
             ? `<img src="${escapeHTML(vehicle.image)}"
                     alt="${escapeHTML(vehicle.model || "Vehicle")}"
                     onerror="this.style.display='none'">`
-            : vehicleIcon;
+            : `<div style="font-size: 4rem;">${vehicleIcon}</div>`;
 
         const isMaintenance = status === "maintenance";
 
@@ -180,7 +179,7 @@ function displayVehicles(vehicles, isDateFiltered = false, startDate = "", endDa
                         <strong>₹${Number(vehicle.price_per_day ?? 0).toLocaleString("en-IN")}</strong> / day
                     </p>
 
-                    <div style="display:flex; justify-content:space-between; align-items:center; margin-top: 12px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 14px;">
                         <span class="admin-status ${status.replace(/[\s-]/g, '_')}">
                             ${escapeHTML(vehicle.status || "available")}
                         </span>
@@ -196,26 +195,30 @@ function displayVehicles(vehicles, isDateFiltered = false, startDate = "", endDa
     }).join("");
 }
 
-// SEARCH AND FILTER
+// SEARCH, FILTER & SORT
 function filterVehicles() {
     const searchInput = document.getElementById("searchInput");
     const categoryFilter = document.getElementById("categoryFilter");
     const typeFilter = document.getElementById("typeFilter");
+    const locationFilter = document.getElementById("locationFilter");
+    const sortFilter = document.getElementById("sortFilter");
     const startDateInput = document.getElementById("filterStartDate");
     const endDateInput = document.getElementById("filterEndDate");
 
     const search = (searchInput?.value || "").trim().toLowerCase();
     const category = categoryFilter?.value || "all";
     const type = typeFilter?.value || "all";
+    const location = locationFilter?.value || "all";
+    const sort = sortFilter?.value || "default";
     const startDate = startDateInput?.value || "";
     const endDate = endDateInput?.value || "";
 
     const isDateFiltered = !!(startDate && endDate && endDate > startDate);
 
-    const filtered = allVehicles.filter(vehicle => {
+    let filtered = allVehicles.filter(vehicle => {
         const model = String(vehicle.model || "").toLowerCase();
         const number = String(vehicle.vehicle_number || "").toLowerCase();
-        const location = String(vehicle.location || "").toLowerCase();
+        const vLocation = String(vehicle.location || "").toLowerCase();
         const vCategory = String(vehicle.category || "car").toLowerCase();
         const vType = String(vehicle.type || "");
         const status = String(vehicle.status || "").toLowerCase();
@@ -231,13 +234,21 @@ function filterVehicles() {
         const matchesSearch = !search ||
             model.includes(search) ||
             number.includes(search) ||
-            location.includes(search);
+            vLocation.includes(search);
 
         const matchesCategory = category === "all" || vCategory === category.toLowerCase();
         const matchesType = type === "all" || vType === type;
+        const matchesLocation = location === "all" || vLocation.includes(location.toLowerCase());
 
-        return matchesSearch && matchesCategory && matchesType;
+        return matchesSearch && matchesCategory && matchesType && matchesLocation;
     });
+
+    // Sorting
+    if (sort === "price_asc") {
+        filtered.sort((a, b) => Number(a.price_per_day || 0) - Number(b.price_per_day || 0));
+    } else if (sort === "price_desc") {
+        filtered.sort((a, b) => Number(b.price_per_day || 0) - Number(a.price_per_day || 0));
+    }
 
     displayVehicles(filtered, isDateFiltered, startDate, endDate);
 }
@@ -247,11 +258,16 @@ function clearAllFilters() {
     const searchInput = document.getElementById("searchInput");
     const categoryFilter = document.getElementById("categoryFilter");
     const typeFilter = document.getElementById("typeFilter");
+    const locationFilter = document.getElementById("locationFilter");
+    const sortFilter = document.getElementById("sortFilter");
     const startDateInput = document.getElementById("filterStartDate");
     const endDateInput = document.getElementById("filterEndDate");
 
     if (searchInput) searchInput.value = "";
     if (categoryFilter) categoryFilter.value = "all";
+    if (typeFilter) typeFilter.value = "all";
+    if (locationFilter) locationFilter.value = "all";
+    if (sortFilter) sortFilter.value = "default";
     if (startDateInput) startDateInput.value = "";
     if (endDateInput) endDateInput.value = "";
 
@@ -266,11 +282,12 @@ document.getElementById("categoryFilter")?.addEventListener("change", function (
     filterVehicles();
 });
 document.getElementById("typeFilter")?.addEventListener("change", filterVehicles);
+document.getElementById("locationFilter")?.addEventListener("change", filterVehicles);
+document.getElementById("sortFilter")?.addEventListener("change", filterVehicles);
 document.getElementById("filterStartDate")?.addEventListener("change", filterVehicles);
 document.getElementById("filterEndDate")?.addEventListener("change", filterVehicles);
 document.getElementById("clearFiltersBtn")?.addEventListener("click", clearAllFilters);
 
-// Global for inline button
 window.clearAllFilters = clearAllFilters;
 
 // Initial Load

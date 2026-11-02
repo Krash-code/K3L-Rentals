@@ -2,236 +2,286 @@
 <html lang="en">
 
 <head>
-
     <meta charset="UTF-8">
-
-    <meta
-        name="viewport"
-        content="width=device-width, initial-scale=1.0">
-
-    <title>Manage Bookings - K3L Rentals</title>
-
-    <link
-        rel="stylesheet"
-        href="css/style.css">
-
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Manage Bookings - K3L Rentals Admin</title>
+    <link rel="stylesheet" href="css/style.css">
+    <style>
+        .admin-tabs {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 20px;
+            border-bottom: 2px solid var(--slate-200);
+            padding-bottom: 8px;
+            overflow-x: auto;
+        }
+        .admin-tab-btn {
+            background: transparent;
+            border: none;
+            padding: 8px 16px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: var(--slate-600);
+            cursor: pointer;
+            border-radius: var(--radius-sm);
+            transition: var(--transition);
+        }
+        .admin-tab-btn.active {
+            background: var(--primary);
+            color: white;
+        }
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(15, 23, 42, 0.7);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        .modal-card {
+            background: white;
+            border-radius: var(--radius-lg);
+            max-width: 650px;
+            width: 100%;
+            max-height: 90vh;
+            overflow-y: auto;
+            padding: 24px;
+        }
+        .photo-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+            margin: 12px 0;
+        }
+        .photo-slot {
+            background: var(--slate-50);
+            border: 1px dashed var(--slate-300);
+            border-radius: 6px;
+            padding: 10px;
+            text-align: center;
+            font-size: 0.82rem;
+        }
+        .photo-slot img {
+            max-height: 100px;
+            margin: 6px auto;
+            border-radius: 4px;
+            display: none;
+        }
+    </style>
 </head>
 
 <body>
 
 <header class="navbar">
-
     <div class="logo">
-        K3L RENTALS
+        🚗 K3L <span>ADMIN</span>
     </div>
-
     <nav>
-
-        <a href="admin-dashboard.html">
-            Dashboard
-        </a>
-
-        <a href="admin-vehicles.html">
-            Vehicles
-        </a>
-
-        <a href="admin-bookings.html">
-            Bookings
-        </a>
-
-        <a href="admin-customers.html">
-            Customers
-        </a>
-
-        <a href="admin-fleet.html">
-            Fleet
-        </a>
-
-        <a href="admin-maintenance.html">
-            Maintenance
-        </a>
-
-        <a href="admin-reports.html">
-            Reports
-        </a>
-
-        <button
-            id="logoutBtn"
-            class="nav-btn">
-
-            Logout
-
-        </button>
-
+        <a href="admin-dashboard.html">Dashboard</a>
+        <a href="admin-verification.html">Verification</a>
+        <a href="admin-bookings.html" style="color: #60a5fa; font-weight: 600;">Bookings</a>
+        <a href="admin-vehicles.html">Vehicles</a>
+        <a href="admin-fleet.html">Fleet</a>
+        <a href="admin-maintenance.html">Maintenance</a>
+        <a href="admin-reports.html">Reports</a>
+        <button id="logoutBtn" class="nav-btn">Logout</button>
     </nav>
-
 </header>
 
-
 <section class="section">
-
     <div class="admin-page-header">
-
         <div>
-
-            <h1>
-                Manage Bookings
-            </h1>
-
+            <h1>Manage Bookings &amp; Vehicle Handover</h1>
             <p class="section-subtitle">
-                View and manage customer bookings.
+                Track full lifecycle: verification, advance payments, vehicle inspection photos, and trip completion.
             </p>
-
         </div>
-
+        <div>
+            <a href="admin-verification.html" class="primary-btn" style="padding: 10px 18px; font-size: 0.92rem;">
+                🪪 Document Review &amp; Payment Portal →
+            </a>
+        </div>
     </div>
 
+    <!-- Filter Tabs -->
+    <div class="admin-tabs">
+        <button class="admin-tab-btn active" data-tab="all">All Bookings</button>
+        <button class="admin-tab-btn" data-tab="pending_review">Pending Review</button>
+        <button class="admin-tab-btn" data-tab="awaiting_advance">Awaiting Advance</button>
+        <button class="admin-tab-btn" data-tab="confirmed">Confirmed</button>
+        <button class="admin-tab-btn" data-tab="active">Active / In Use</button>
+        <button class="admin-tab-btn" data-tab="completed">Completed</button>
+        <button class="admin-tab-btn" data-tab="cancelled">Cancelled</button>
+    </div>
 
-    <!-- EDIT BOOKING FORM -->
-
-    <div
-        id="bookingFormContainer"
-        class="admin-form-card hidden">
-
-        <h2>
-            Edit Booking
-        </h2>
-
-
+    <!-- EDIT BOOKING FORM (Hidden by default) -->
+    <div id="bookingFormContainer" class="admin-form-card hidden" style="margin-bottom: 24px; background: white; padding: 20px; border-radius: 10px; border: 1px solid var(--slate-200);">
+        <h2>Edit Booking Schedule &amp; Status</h2>
         <form id="bookingForm">
+            <input type="hidden" id="bookingId">
 
-            <input
-                type="hidden"
-                id="bookingId">
-
-
-            <div class="form-grid">
-
-
+            <div class="form-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 14px; margin: 16px 0;">
                 <div>
-
-                    <label for="start_date">
-                        Start Date
-                    </label>
-
-                    <input
-                        type="date"
-                        id="start_date"
-                        required>
-
+                    <label for="start_date">Start Date</label>
+                    <input type="date" id="start_date" required style="width: 100%; padding: 8px;">
                 </div>
 
-
                 <div>
-
-                    <label for="end_date">
-                        End Date
-                    </label>
-
-                    <input
-                        type="date"
-                        id="end_date"
-                        required>
-
+                    <label for="end_date">End Date</label>
+                    <input type="date" id="end_date" required style="width: 100%; padding: 8px;">
                 </div>
 
-
                 <div>
-
-                    <label for="booking_status">
-                        Status
-                    </label>
-
-                    <select
-                        id="booking_status"
-                        required>
-
-                        <option value="confirmed">
-                            Confirmed
-                        </option>
-
-                        <option value="pending">
-                            Pending
-                        </option>
-
-                        <option value="cancelled">
-                            Cancelled
-                        </option>
-
+                    <label for="booking_status">Lifecycle Status</label>
+                    <select id="booking_status" required style="width: 100%; padding: 8px;">
+                        <option value="Pending Review">Pending Review</option>
+                        <option value="Awaiting Advance">Awaiting Advance</option>
+                        <option value="Confirmed">Confirmed</option>
+                        <option value="Active">Active (In Use)</option>
+                        <option value="Completed">Completed</option>
+                        <option value="Cancelled">Cancelled</option>
                     </select>
-
                 </div>
-
-
             </div>
 
-
-            <div class="form-buttons">
-
-                <button
-                    type="submit"
-                    class="primary-btn">
-
-                    Update Booking
-
-                </button>
-
-
-                <button
-                    type="button"
-                    id="cancelBookingEdit"
-                    class="secondary-btn">
-
-                    Cancel
-
-                </button>
-
+            <div class="form-buttons" style="display: flex; gap: 10px;">
+                <button type="submit" class="primary-btn">Update Booking</button>
+                <button type="button" id="cancelBookingEdit" class="secondary-btn">Cancel</button>
             </div>
 
-
-            <p id="bookingFormMessage"></p>
-
+            <p id="bookingFormMessage" style="margin-top: 10px;"></p>
         </form>
-
     </div>
-
 
     <!-- BOOKINGS TABLE -->
-
     <div class="admin-table-container">
-
-        <h2>
-            All Bookings
-        </h2>
-
-
+        <h2>Bookings Catalog</h2>
         <div id="bookingTableContainer">
-
-            <p>
-                Loading bookings...
-            </p>
-
+            <p>Loading bookings records...</p>
         </div>
-
     </div>
-
-
 </section>
 
+<!-- Handover & Inspection Modal -->
+<div id="inspectionModal" class="modal-overlay">
+    <div class="modal-card">
+        <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--slate-200); padding-bottom: 12px; margin-bottom: 16px;">
+            <h2 id="inspectionModalTitle" style="font-size: 1.25rem; margin: 0;">Vehicle Inspection &amp; Handover</h2>
+            <button id="closeInspectionModal" style="background: none; border: none; font-size: 1.5rem; cursor: pointer; color: var(--slate-400);">&times;</button>
+        </div>
 
+        <div id="inspectionVehicleInfo" style="background: var(--slate-50); border: 1px solid var(--slate-200); border-radius: 8px; padding: 12px; font-size: 0.88rem; margin-bottom: 16px;">
+        </div>
+
+        <form id="inspectionForm">
+            <input type="hidden" id="inspBookingId">
+            <input type="hidden" id="inspType"> <!-- 'pickup' or 'return' -->
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px;">
+                <div class="form-group">
+                    <label id="odometerLabel" for="inspOdometer">Odometer Reading (KM) *</label>
+                    <input type="number" id="inspOdometer" placeholder="e.g. 42350" required style="padding: 9px;">
+                </div>
+                <div class="form-group">
+                    <label for="inspFuelLevel">Fuel Level *</label>
+                    <select id="inspFuelLevel" required style="padding: 9px;">
+                        <option value="100%">Full Tank (100%)</option>
+                        <option value="75%">3/4 Tank (75%)</option>
+                        <option value="50%">Half Tank (50%)</option>
+                        <option value="25%">1/4 Tank (25%)</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Pickup Baseline Reference Photos (Shown during return inspection) -->
+            <div id="pickupBaselineSection" style="display: none; background: #f1f5f9; border: 1px solid #cbd5e1; border-radius: 8px; padding: 12px; margin-bottom: 16px;">
+                <strong style="color: #0f172a; font-size: 0.88rem; display: block; margin-bottom: 4px;">
+                    🔍 Pickup Baseline Condition Photos (Compare for New Scratches/Dents):
+                </strong>
+                <p id="pickupBaselineStats" style="font-size: 0.8rem; color: #475569; margin-bottom: 8px;"></p>
+                <div id="pickupBaselineGrid" style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px;">
+                </div>
+            </div>
+
+            <!-- 4-Angle Photo Inspection (Front, Back, Left, Right) -->
+            <div style="margin: 16px 0;">
+                <strong id="photoSectionTitle" style="font-size: 0.9rem; color: var(--slate-800); display: block; margin-bottom: 6px;">
+                    📸 4-Angle Condition Photos (Front, Back, Left, Right) *
+                </strong>
+                <p style="font-size: 0.8rem; color: var(--slate-500); margin-bottom: 10px;">
+                    Capture clear photos to verify vehicle state and protect both customer and fleet operations.
+                </p>
+
+                <div class="photo-grid">
+                    <div class="photo-slot">
+                        <label>Front Angle *</label>
+                        <input type="file" id="photoFront" accept="image/*" required style="font-size: 0.75rem; width: 100%; margin-top: 4px;">
+                        <img id="prevFront" alt="Front">
+                    </div>
+                    <div class="photo-slot">
+                        <label>Back Angle *</label>
+                        <input type="file" id="photoBack" accept="image/*" required style="font-size: 0.75rem; width: 100%; margin-top: 4px;">
+                        <img id="prevBack" alt="Back">
+                    </div>
+                    <div class="photo-slot">
+                        <label>Left Angle *</label>
+                        <input type="file" id="photoLeft" accept="image/*" required style="font-size: 0.75rem; width: 100%; margin-top: 4px;">
+                        <img id="prevLeft" alt="Left">
+                    </div>
+                    <div class="photo-slot">
+                        <label>Right Angle *</label>
+                        <input type="file" id="photoRight" accept="image/*" required style="font-size: 0.75rem; width: 100%; margin-top: 4px;">
+                        <img id="prevRight" alt="Right">
+                    </div>
+                </div>
+            </div>
+
+            <div class="form-group" id="fineGroup" style="display: none; margin-bottom: 12px;">
+                <label for="inspFineAmount">Damage / Late Return Fine (₹) (If applicable)</label>
+                <input type="number" id="inspFineAmount" value="0" min="0" style="padding: 9px;">
+            </div>
+
+            <div class="form-group">
+                <label for="inspNotes">Inspection Remarks / Existing Scratches</label>
+                <textarea id="inspNotes" rows="2" placeholder="e.g. Clean vehicle, scratch on left rear bumper noted..." style="padding: 8px; border: 1px solid var(--slate-300); border-radius: 6px;"></textarea>
+            </div>
+
+            <button type="submit" id="saveInspectionBtn" class="primary-btn" style="width: 100%; margin-top: 16px; padding: 12px;">
+                Confirm Inspection &amp; Update State
+            </button>
+        </form>
+
+        <div id="inspectionMessage" style="margin-top: 12px;"></div>
+    </div>
+</div>
+
+<!-- Admin Inspection Comparison Modal -->
+<div id="adminComparisonModal" class="modal-overlay">
+    <div class="modal-card" style="max-width: 760px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--slate-200); padding-bottom: 12px; margin-bottom: 16px;">
+            <h2 style="font-size: 1.25rem; margin: 0; color: var(--slate-900);">📸 Vehicle Condition &amp; Damage Audit Report</h2>
+            <button id="closeAdminComparisonModal" style="background: none; border: none; font-size: 1.5rem; cursor: pointer; color: var(--slate-400);">&times;</button>
+        </div>
+
+        <div id="adminComparisonBody">
+            <p>Loading audit comparison...</p>
+        </div>
+    </div>
+</div>
 
 <!-- Firebase SDK -->
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 
-<!-- Firebase Configuration -->
 <script src="js/firebase-config.js"></script>
-
-<!-- Existing JavaScript -->
 <script src="js/common.js"></script>
 <script src="js/admin-bookings.js"></script>
 
 </body>
-
 </html>

@@ -1,4 +1,4 @@
-// K3L Rentals - Multi-Point Final Verification Script
+// K3L Rentals - Multi-Point Final Verification Script (Pure ASCII)
 const API_KEY = "AIzaSyDcVHD6NXM2MNkiNBlOR6ovdRg_OiHTdsU";
 const PROJECT_ID = "k3l-rentals-13ff0";
 
@@ -6,10 +6,12 @@ const AUTH_SIGNIN_URL = `https://identitytoolkit.googleapis.com/v1/accounts:sign
 const AUTH_SIGNUP_URL = `https://identitytoolkit.googleapis.com/v1/accounts:signUp?key=${API_KEY}`;
 const FIRESTORE_BASE = `https://firestore.googleapis.com/v1/projects/${PROJECT_ID}/databases/(default)/documents`;
 
+const REFERER_HEADER = { "Referer": "https://k3l-rentals-13ff0.web.app/" };
+
 async function signIn(email, password) {
     const res = await fetch(AUTH_SIGNIN_URL, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...REFERER_HEADER },
         body: JSON.stringify({ email, password, returnSecureToken: true })
     });
     return await res.json();
@@ -18,28 +20,28 @@ async function signIn(email, password) {
 async function signUp(email, password) {
     const res = await fetch(AUTH_SIGNUP_URL, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...REFERER_HEADER },
         body: JSON.stringify({ email, password, returnSecureToken: true })
     });
     return await res.json();
 }
 
 async function getDoc(path, token) {
-    const headers = {};
+    const headers = { ...REFERER_HEADER };
     if (token) headers["Authorization"] = `Bearer ${token}`;
     const res = await fetch(`${FIRESTORE_BASE}/${path}?key=${API_KEY}`, { headers });
     return { status: res.status, data: await res.json() };
 }
 
 async function getCollection(collection, token) {
-    const headers = {};
+    const headers = { ...REFERER_HEADER };
     if (token) headers["Authorization"] = `Bearer ${token}`;
     const res = await fetch(`${FIRESTORE_BASE}/${collection}?key=${API_KEY}`, { headers });
     return { status: res.status, data: await res.json() };
 }
 
 async function createDoc(collection, docId, fields, token) {
-    const headers = { "Content-Type": "application/json" };
+    const headers = { "Content-Type": "application/json", ...REFERER_HEADER };
     if (token) headers["Authorization"] = `Bearer ${token}`;
     const url = docId
         ? `${FIRESTORE_BASE}/${collection}/${docId}?key=${API_KEY}`
@@ -53,7 +55,7 @@ async function createDoc(collection, docId, fields, token) {
 }
 
 async function patchDoc(path, fields, token, updateMask = null) {
-    const headers = { "Content-Type": "application/json" };
+    const headers = { "Content-Type": "application/json", ...REFERER_HEADER };
     if (token) headers["Authorization"] = `Bearer ${token}`;
     let url = `${FIRESTORE_BASE}/${path}?key=${API_KEY}`;
     if (updateMask && Array.isArray(updateMask)) {
@@ -68,7 +70,7 @@ async function patchDoc(path, fields, token, updateMask = null) {
 }
 
 async function deleteDoc(path, token) {
-    const headers = {};
+    const headers = { ...REFERER_HEADER };
     if (token) headers["Authorization"] = `Bearer ${token}`;
     const res = await fetch(`${FIRESTORE_BASE}/${path}?key=${API_KEY}`, {
         method: "DELETE",
@@ -79,7 +81,7 @@ async function deleteDoc(path, token) {
 
 async function runVerification() {
     console.log("==========================================================================");
-    console.log("             K3L RENTALS — FINAL VERIFICATION AUDIT PASS                  ");
+    console.log("             K3L RENTALS -- FINAL VERIFICATION AUDIT PASS                 ");
     console.log("==========================================================================");
 
     // -------------------------------------------------------------------------
@@ -94,7 +96,7 @@ async function runVerification() {
         const id = d.name.split("/").pop();
         const f = d.fields;
         const rate = f.price_per_day?.integerValue || f.price_per_day?.doubleValue;
-        console.log(`  [${i + 1}] ID: ${id.padEnd(14)} | ${f.model?.stringValue.padEnd(22)} | ${f.category?.stringValue.toUpperCase().padEnd(5)} | Rate: ₹${rate}/day | Status: ${f.status?.stringValue.padEnd(11)} | 📍${f.location?.stringValue}`);
+        console.log(`  [${i + 1}] ID: ${id.padEnd(14)} | ${f.model?.stringValue.padEnd(22)} | ${f.category?.stringValue.toUpperCase().padEnd(5)} | Rate: Rs.${rate}/day | Status: ${f.status?.stringValue.padEnd(11)} | Hub: ${f.location?.stringValue}`);
     });
 
     // -------------------------------------------------------------------------
@@ -137,7 +139,10 @@ async function runVerification() {
         rental_days: { integerValue: "3" },
         price_per_day: { integerValue: "2200" },
         total_amount: { integerValue: "6600" },
-        status: { stringValue: "Confirmed" },
+        advance_amount: { integerValue: "1650" },
+        status: { stringValue: "Pending Review" },
+        verification_status: { stringValue: "Pending Review" },
+        payment_status: { stringValue: "Awaiting Approval" },
         createdAt: { stringValue: new Date().toISOString() }
     }, custToken);
     console.log(`3c. Booking: Created booking '${bId}' for vehicle '${vId}': HTTP ${bookRes.status}`);
@@ -147,13 +152,13 @@ async function runVerification() {
         userId: { stringValue: custUid },
         start_date: { stringValue: "2026-11-20" },
         end_date: { stringValue: "2026-11-23" },
-        status: { stringValue: "Confirmed" }
+        status: { stringValue: "Pending Review" }
     }, custToken);
     console.log(`    Public schedule slot registered under 'vehicles/${vId}/schedules/${bId}': HTTP ${schedRes.status}`);
 
     // 3d. Booking History (Read own booking)
     const histRes = await getDoc(`bookings/${bId}`, custToken);
-    console.log(`3d. Booking History: Customer retrieved own booking: HTTP ${histRes.status} (Total: ₹${histRes.data.fields.total_amount.integerValue})`);
+    console.log(`3d. Booking History: Customer retrieved own booking: HTTP ${histRes.status} (Total: Rs.${histRes.data.fields?.total_amount?.integerValue})`);
 
     // 3e. Customer Cancellation
     const cancelRes = await patchDoc(`bookings/${bId}`, {
@@ -223,7 +228,7 @@ async function runVerification() {
     console.log(`Customer attempt to write into /admins: HTTP ${clientAdminWriteAttempt.status} (Expected 403 Forbidden)`);
 
     const legitAdminDoc = await getDoc(`admins/${adminAuth.localId}`, adminAuth.idToken);
-    console.log(`Legitimate Admin in /admins: HTTP ${legitAdminDoc.status} (Exists & Verified)`);
+    console.log(`Legitimate Admin in /admins: HTTP ${legitAdminDoc.status} (Exists and Verified)`);
 
     // -------------------------------------------------------------------------
     // CHECK 6: FIRESTORE SECURITY RULES UNAUTHORIZED ACCESS TESTS
@@ -248,7 +253,7 @@ async function runVerification() {
     // -------------------------------------------------------------------------
     console.log("\n>>> CHECK 7: Firebase Spark Plan & Billing Verification");
     console.log("Firebase Project ID: k3l-rentals-13ff0");
-    console.log("Active Plan: Spark (Free tier ₹0 / month)");
+    console.log("Active Plan: Spark (Free tier Rs.0 / month)");
     console.log("Services Utilized: Firebase Hosting (Static CDN), Firebase Auth (Email/Pass), Cloud Firestore (Free quota)");
     console.log("Paid Services Disabled: Cloud Functions (None), Cloud SQL (None), Blaze billing (Disabled)");
 

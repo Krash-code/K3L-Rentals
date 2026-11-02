@@ -2,138 +2,91 @@
 <html lang="en">
 
 <head>
-
     <meta charset="UTF-8">
-
-    <meta
-        name="viewport"
-        content="width=device-width, initial-scale=1.0">
-
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Customer Login - K3L Rentals</title>
-
-    <link
-        rel="stylesheet"
-        href="css/style.css">
-
+    <link rel="stylesheet" href="css/style.css">
 </head>
 
 <body>
 
-
 <header class="navbar">
-
     <div class="logo">
-        K3L RENTALS
+        🚗 K3L <span>RENTALS</span>
     </div>
-
     <nav>
-
-        <a href="index.html">
-            Home
-        </a>
-
-        <a href="vehicles.html">
-            Vehicles
-        </a>
-
-        <a
-            href="login.html"
-            id="loginLink">
-
-            Login
-
-        </a>
-
-        <a
-            href="register.html"
-            id="registerLink">
-
-            Register
-
-        </a>
-
+        <a href="index.html">Home</a>
+        <a href="vehicles.html">Vehicles</a>
+        <a href="login.html" id="loginLink">Login</a>
+        <a href="register.html" id="registerLink">Register</a>
     </nav>
-
 </header>
 
-
-
 <div class="auth-container">
-
     <div class="auth-card">
+        <div class="auth-header">
+            <h1>Customer Login</h1>
+            <p class="subtitle">Access your account to book vehicles and manage rentals</p>
+        </div>
 
-        <h1>
-            Customer Login
-        </h1>
+        <form id="loginForm" novalidate>
+            <div class="form-group">
+                <label for="email">Email Address *</label>
+                <input
+                    type="email"
+                    id="email"
+                    placeholder="Enter your registered email"
+                    required
+                    autocomplete="email">
+            </div>
 
-        <p>
-            Login to book vehicles and manage your bookings.
-        </p>
+            <div class="form-group">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <label for="password">Password *</label>
+                    <a href="#" id="forgotPasswordBtn" style="font-size: 0.82rem; color: var(--primary); font-weight: 500;">
+                        Forgot Password?
+                    </a>
+                </div>
+                <input
+                    type="password"
+                    id="password"
+                    placeholder="Enter your account password"
+                    required
+                    autocomplete="current-password">
+            </div>
 
-
-        <form id="loginForm">
-
-            <label for="email">
-                Email
-            </label>
-
-            <input
-                type="email"
-                id="email"
-                placeholder="Enter your email"
-                required>
-
-
-
-            <label for="password">
-                Password
-            </label>
-
-            <input
-                type="password"
-                id="password"
-                placeholder="Enter your password"
-                required>
-
-
-
-            <button
-                type="submit"
-                class="primary-btn">
-
-                Login
-
+            <button type="submit" class="primary-btn" id="loginBtn" style="margin-top: 10px;">
+                Sign In
             </button>
-
-
         </form>
 
+        <div id="message" class="form-message" style="margin-top: 16px;"></div>
 
-        <p
-            id="message"
-            class="form-message">
-        </p>
+        <!-- Verification Banner (Hidden by default, shown if unverified) -->
+        <div id="verificationBanner" style="display: none; margin-top: 16px; background: #fffbeb; border: 1px solid #fde68a; padding: 14px; border-radius: 8px;">
+            <p style="color: #92400e; font-size: 0.88rem; margin-bottom: 8px;">
+                ⚠️ <strong>Email Not Verified:</strong> Your email address is not yet verified. Please verify your email before renting vehicles.
+            </p>
+            <button id="resendVerificationBtn" class="outline-btn" style="padding: 6px 14px; font-size: 0.82rem;">
+                Resend Verification Link
+            </button>
+            <span id="resendStatus" style="font-size: 0.82rem; margin-left: 8px; color: #065f46;"></span>
+        </div>
 
-
-        <p>
+        <div style="margin-top: 24px; text-align: center; font-size: 0.92rem; color: var(--slate-600);">
             Don't have an account?
-
-            <a href="register.html">
-                Register
+            <a href="register.html" style="color: var(--primary); font-weight: 600; text-decoration: underline;">
+                Register here (18+)
             </a>
-        </p>
+        </div>
 
-        <p style="margin-top: 15px; border-top: 1px solid #e2e8f0; padding-top: 12px;">
-            <a href="admin-login.html" style="color: #4a5568; font-size: 0.9rem;">
-                Admin Portal Login →
+        <div style="margin-top: 20px; border-top: 1px solid var(--slate-200); padding-top: 14px; text-align: center;">
+            <a href="admin-login.html" style="color: var(--slate-600); font-size: 0.88rem; font-weight: 500;">
+                Looking for the Admin Portal? Click here →
             </a>
-        </p>
-
+        </div>
     </div>
-
 </div>
-
-
 
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
@@ -143,7 +96,5 @@
 <script src="js/common.js"></script>
 <script src="js/login.js"></script>
 
-
 </body>
-
 </html>

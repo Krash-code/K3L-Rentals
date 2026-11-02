@@ -2,148 +2,114 @@
 <html lang="en">
 
 <head>
-
     <meta charset="UTF-8">
-
-    <meta
-        name="viewport"
-        content="width=device-width, initial-scale=1.0">
-
-    <title>Register - K3L Rentals</title>
-
-    <link
-        rel="stylesheet"
-        href="css/style.css">
-
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Customer Registration - K3L Rentals</title>
+    <link rel="stylesheet" href="css/style.css">
 </head>
-
 
 <body>
 
-
 <header class="navbar">
-
     <div class="logo">
-        K3L RENTALS
+        🚗 K3L <span>RENTALS</span>
     </div>
-
-
     <nav>
-
-        <a href="index.html">
-            Home
-        </a>
-
-        <a href="vehicles.html">
-            Vehicles
-        </a>
-
-        <a href="login.html">
-            Login
-        </a>
-
+        <a href="index.html">Home</a>
+        <a href="vehicles.html">Vehicles</a>
+        <a href="login.html" id="loginLink">Login</a>
     </nav>
-
 </header>
 
-
-
 <div class="auth-container">
-
     <div class="auth-card">
+        <div class="auth-header">
+            <h1>Create Customer Account</h1>
+            <p class="subtitle">Join K3L Rentals to reserve cars &amp; bikes across Tamil Nadu</p>
+        </div>
 
-        <h1>
-            Create Account
-        </h1>
+        <form id="registerForm" novalidate>
+            <div class="form-group">
+                <label for="name">Full Name *</label>
+                <input
+                    type="text"
+                    id="name"
+                    placeholder="e.g. Ramesh Kumar"
+                    required
+                    autocomplete="name">
+            </div>
 
-        <p>
-            Register to start renting vehicles.
-        </p>
+            <div class="form-group">
+                <label for="email">Email Address *</label>
+                <input
+                    type="email"
+                    id="email"
+                    placeholder="e.g. ramesh@example.com"
+                    required
+                    autocomplete="email">
+                <small style="color: var(--slate-500); font-size: 0.8rem;">A verification link will be sent to this email</small>
+            </div>
 
+            <div class="form-group">
+                <label for="phone">Mobile Phone Number *</label>
+                <input
+                    type="tel"
+                    id="phone"
+                    placeholder="10-digit mobile number (e.g. 9876543210)"
+                    pattern="[6-9][0-9]{9}"
+                    maxlength="10"
+                    required
+                    autocomplete="tel">
+                <small style="color: var(--slate-500); font-size: 0.8rem;">10-digit Indian mobile number</small>
+            </div>
 
-        <form id="registerForm">
+            <div class="form-group">
+                <label for="dob">Date of Birth (Age 18+ Required) *</label>
+                <input
+                    type="date"
+                    id="dob"
+                    required
+                    autocomplete="bday">
+                <small style="color: var(--slate-500); font-size: 0.8rem;">You must be at least 18 years old to drive/rent as per RTO regulations</small>
+            </div>
 
+            <div class="form-group">
+                <label for="password">Password *</label>
+                <input
+                    type="password"
+                    id="password"
+                    placeholder="Create a strong password (min 6 characters)"
+                    minlength="6"
+                    required
+                    autocomplete="new-password">
+            </div>
 
-            <label for="name">
-                Full Name
-            </label>
+            <div class="form-group">
+                <label for="confirmPassword">Confirm Password *</label>
+                <input
+                    type="password"
+                    id="confirmPassword"
+                    placeholder="Re-enter your password"
+                    minlength="6"
+                    required
+                    autocomplete="new-password">
+            </div>
 
-            <input
-                type="text"
-                id="name"
-                placeholder="Enter your name"
-                required>
-
-
-
-            <label for="email">
-                Email
-            </label>
-
-            <input
-                type="email"
-                id="email"
-                placeholder="Enter your email"
-                required>
-
-
-
-            <label for="phone">
-                Phone
-            </label>
-
-            <input
-                type="text"
-                id="phone"
-                placeholder="Enter your phone number">
-
-
-
-            <label for="password">
-                Password
-            </label>
-
-            <input
-                type="password"
-                id="password"
-                placeholder="Create a password"
-                required>
-
-
-
-            <button
-                type="submit"
-                class="primary-btn">
-
-                Register
-
+            <button type="submit" class="primary-btn" id="submitBtn" style="margin-top: 10px;">
+                Create Account &amp; Send Verification Email
             </button>
-
-
         </form>
 
+        <div id="message" class="form-message" style="margin-top: 16px;"></div>
 
-        <p
-            id="message"
-            class="form-message">
-        </p>
-
-
-        <p>
-
+        <div style="margin-top: 24px; text-align: center; font-size: 0.92rem; color: var(--slate-600);">
             Already have an account?
-
-            <a href="login.html">
-                Login
+            <a href="login.html" style="color: var(--primary); font-weight: 600; text-decoration: underline;">
+                Login here
             </a>
-
-        </p>
-
+        </div>
     </div>
-
 </div>
-
-
 
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
@@ -153,7 +119,5 @@
 <script src="js/common.js"></script>
 <script src="js/register.js"></script>
 
-
 </body>
-
 </html>

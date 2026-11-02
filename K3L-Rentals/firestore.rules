@@ -16,7 +16,7 @@ service cloud.firestore {
     }
 
     // ----------------------------------------------------
-    // USERS COLLECTION (Customer Profiles)
+    // USERS COLLECTION (Customer Profiles & In-App Notifications)
     // ----------------------------------------------------
     match /users/{userId} {
       allow read: if isOwner(userId) || isAdmin();
@@ -31,6 +31,12 @@ service cloud.firestore {
         isAdmin();
 
       allow delete: if isAdmin();
+
+      // Customer notifications subcollection
+      match /notifications/{notifId} {
+        allow read, update, delete: if isOwner(userId) || isAdmin();
+        allow create: if isAuthenticated();
+      }
     }
 
     // ----------------------------------------------------
@@ -42,7 +48,7 @@ service cloud.firestore {
     }
 
     // ----------------------------------------------------
-    // VEHICLES COLLECTION (Fleet Catalog)
+    // VEHICLES COLLECTION (Fleet Catalog & Schedules)
     // ----------------------------------------------------
     match /vehicles/{vehicleId} {
       allow read: if true;
@@ -80,11 +86,41 @@ service cloud.firestore {
         request.resource.data.end_date is string &&
         request.resource.data.end_date > request.resource.data.start_date) || isAdmin();
 
-      allow update: if (isAuthenticated() && resource.data.userId == request.auth.uid &&
-        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'updatedAt']) &&
-        request.resource.data.status == 'Cancelled') || isAdmin();
+      // Granular update permissions:
+      // 1. Admin can update anything (approve docs, confirm payment, record inspection, complete trip)
+      // 2. Customer can:
+      //    a) Cancel booking
+      //    b) Submit 25% advance payment UTR when approved
+      //    c) Resubmit identity / DL documents if previously rejected
+      allow update: if isAdmin() || (
+        isAuthenticated() && resource.data.userId == request.auth.uid && (
+          // a) Cancellation
+          (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'updatedAt']) &&
+           request.resource.data.status == 'Cancelled') ||
+          // b) Payment Reference Submission
+          (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['payment_status', 'utr_number', 'payment_method', 'payment_submitted_at', 'updatedAt']) &&
+           request.resource.data.payment_status == 'Pending Verification' &&
+           request.resource.data.utr_number is string &&
+           request.resource.data.utr_number.size() >= 6) ||
+          // c) Document Resubmission
+          (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['id_document', 'dl_document', 'id_type', 'verification_status', 'status', 'updatedAt']) &&
+           request.resource.data.verification_status == 'Pending Review' &&
+           request.resource.data.status == 'Pending Review') ||
+          // d) Voluntary Live Trip Location Tracking (Roadside safety during active trips)
+          (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['tracking', 'updatedAt']) &&
+           (resource.data.status == 'Active' || resource.data.status == 'in_use' || resource.data.status == 'In Use'))
+        )
+      );
 
       allow delete: if isAdmin();
+    }
+
+    // ----------------------------------------------------
+    // ADMIN NOTIFICATIONS COLLECTION
+    // ----------------------------------------------------
+    match /admin_notifications/{notifId} {
+      allow read, update, delete: if isAdmin();
+      allow create: if isAuthenticated();
     }
 
     // ----------------------------------------------------

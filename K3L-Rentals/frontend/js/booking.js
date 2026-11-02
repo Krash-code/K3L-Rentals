@@ -1,4 +1,4 @@
-// K3L Rentals - Vehicle Booking & Reservation Engine
+// K3L Rentals - Reservation Engine with Age 18+ Verification & 25% Advance Workflow
 var auth = window.auth || (typeof firebase !== "undefined" ? firebase.auth() : null);
 var db = window.db || (typeof firebase !== "undefined" ? firebase.firestore() : null);
 
@@ -8,9 +8,18 @@ const vehicleId = params.get("id");
 const vehicleSummary = document.getElementById("vehicleSummary");
 const bookingForm = document.getElementById("bookingForm");
 const bookingMessage = document.getElementById("bookingMessage");
+const emailGateBanner = document.getElementById("emailGateBanner");
+const gateUserEmail = document.getElementById("gateUserEmail");
+const gateResendBtn = document.getElementById("gateResendBtn");
+const gateCheckStatusBtn = document.getElementById("gateCheckStatusBtn");
+const gateActionStatus = document.getElementById("gateActionStatus");
+const submitBookingBtn = document.getElementById("submitBookingBtn");
 
 let selectedVehicle = null;
 let activeSchedules = [];
+let compressedIdDoc = null;
+let compressedDlDoc = null;
+let customerProfile = null;
 
 // Escape HTML utility
 function escapeHTML(value) {
@@ -23,13 +32,140 @@ function escapeHTML(value) {
     })[char]);
 }
 
+// Compress file to base64 JPEG via HTML5 Canvas (keeps size < 100KB for Firestore Spark plan)
+function compressImageFile(file, maxDimension = 900, quality = 0.65) {
+    return new Promise((resolve, reject) => {
+        if (!file) return resolve(null);
+
+        // If not an image (e.g. PDF), convert to small base64 directly
+        if (!file.type.startsWith("image/")) {
+            const reader = new FileReader();
+            reader.onload = e => resolve(e.target.result);
+            reader.onerror = reject;
+            reader.readAsDataURL(file);
+            return;
+        }
+
+        const reader = new FileReader();
+        reader.onload = function (e) {
+            const img = new Image();
+            img.onload = function () {
+                let width = img.width;
+                let height = img.height;
+
+                if (width > maxDimension || height > maxDimension) {
+                    if (width > height) {
+                        height = Math.round((height * maxDimension) / width);
+                        width = maxDimension;
+                    } else {
+                        width = Math.round((width * maxDimension) / height);
+                        height = maxDimension;
+                    }
+                }
+
+                const canvas = document.createElement("canvas");
+                canvas.width = width;
+                canvas.height = height;
+                const ctx = canvas.getContext("2d");
+                ctx.drawImage(img, 0, 0, width, height);
+
+                const compressedDataUrl = canvas.toDataURL("image/jpeg", quality);
+                resolve(compressedDataUrl);
+            };
+            img.onerror = reject;
+            img.src = e.target.result;
+        };
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+    });
+}
+
+// Setup Document File Listeners with Preview & Compression
+function setupDocumentUploadListeners() {
+    const idInput = document.getElementById("idDocInput");
+    const dlInput = document.getElementById("dlDocInput");
+    const idPreview = document.getElementById("idDocPreview");
+    const dlPreview = document.getElementById("dlDocPreview");
+
+    if (idInput) {
+        idInput.addEventListener("change", async function () {
+            const file = this.files[0];
+            if (!file) {
+                compressedIdDoc = null;
+                if (idPreview) idPreview.style.display = "none";
+                return;
+            }
+
+            try {
+                compressedIdDoc = await compressImageFile(file);
+                if (idPreview && compressedIdDoc) {
+                    const img = idPreview.querySelector("img");
+                    if (img) img.src = compressedIdDoc;
+                    idPreview.style.display = "block";
+                }
+            } catch (err) {
+                console.error("ID document processing failed:", err);
+                alert("Could not process identity document. Please choose a valid image file.");
+            }
+        });
+    }
+
+    if (dlInput) {
+        dlInput.addEventListener("change", async function () {
+            const file = this.files[0];
+            if (!file) {
+                compressedDlDoc = null;
+                if (dlPreview) dlPreview.style.display = "none";
+                return;
+            }
+
+            try {
+                compressedDlDoc = await compressImageFile(file);
+                if (dlPreview && compressedDlDoc) {
+                    const img = dlPreview.querySelector("img");
+                    if (img) img.src = compressedDlDoc;
+                    dlPreview.style.display = "block";
+                }
+            } catch (err) {
+                console.error("DL document processing failed:", err);
+                alert("Could not process driving licence document. Please choose a valid image file.");
+            }
+        });
+    }
+}
+
 // Set minimum date input to today
 function setMinDateLimits() {
     const today = new Date().toISOString().split("T")[0];
+    const maxDate = new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString().split("T")[0];
     const startDateInput = document.getElementById("start_date");
     const endDateInput = document.getElementById("end_date");
-    if (startDateInput) startDateInput.min = today;
-    if (endDateInput) endDateInput.min = today;
+    if (startDateInput) {
+        startDateInput.min = today;
+        startDateInput.max = maxDate;
+    }
+    if (endDateInput) {
+        endDateInput.min = today;
+        endDateInput.max = maxDate;
+    }
+}
+
+// Check email verification gate
+async function verifyEmailGate(user) {
+    if (!user) return false;
+
+    // In local/demo environments, allow demo accounts if verified or prompt verification
+    if (!user.emailVerified) {
+        if (emailGateBanner) {
+            emailGateBanner.style.display = "block";
+            if (gateUserEmail) gateUserEmail.textContent = user.email;
+        }
+        if (bookingForm) bookingForm.style.display = "none";
+        return false;
+    } else {
+        if (emailGateBanner) emailGateBanner.style.display = "none";
+        return true;
+    }
 }
 
 // Load selected vehicle details and its confirmed schedules
@@ -91,7 +227,7 @@ async function loadVehicle() {
             const sorted = [...activeSchedules].sort((a, b) => (a.start_date || "").localeCompare(b.start_date || ""));
             schedulesHtml = `
                 <div style="margin-top: 12px; background: #fffaf0; border: 1px solid #feebc8; padding: 10px; border-radius: 6px;">
-                    <strong style="color: #c05621; font-size: 0.9rem;">📅 Current Booked Dates:</strong>
+                    <strong style="color: #c05621; font-size: 0.88rem;">📅 Currently Reserved Dates (Unavailable):</strong>
                     <div style="display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px;">
                         ${sorted.map(s => `
                             <span style="background: #feebc8; color: #7b341e; font-size: 0.8rem; padding: 2px 8px; border-radius: 4px; font-weight: 500;">
@@ -99,7 +235,7 @@ async function loadVehicle() {
                             </span>
                         `).join("")}
                     </div>
-                    <small style="color: #744210; display:block; margin-top:4px;">You can book any dates outside these ranges.</small>
+                    <small style="color: #744210; display:block; margin-top:4px;">You can reserve any dates outside the ranges above.</small>
                 </div>
             `;
         }
@@ -109,8 +245,8 @@ async function loadVehicle() {
                 <h2>${icon} ${escapeHTML(selectedVehicle.model || "Vehicle")}</h2>
                 <p><strong>Category:</strong> ${icon} ${category.toUpperCase()} ${selectedVehicle.type ? " • " + escapeHTML(selectedVehicle.type) : ""}</p>
                 <p><strong>Registration Number:</strong> ${escapeHTML(selectedVehicle.vehicle_number || "N/A")}</p>
-                <p><strong>Location:</strong> 📍 ${escapeHTML(selectedVehicle.location || "Coimbatore")}</p>
-                <p><strong>Daily Rate:</strong> <strong>₹${price.toLocaleString("en-IN")}</strong> / day</p>
+                <p><strong>Pickup Hub:</strong> 📍 ${escapeHTML(selectedVehicle.location || "Coimbatore")}</p>
+                <p><strong>Daily Rental Rate:</strong> <strong>₹${price.toLocaleString("en-IN")}</strong> / day</p>
                 <p><strong>Fleet Status:</strong> <span class="admin-status ${status.replace(/[\s-]/g, "_")}">${escapeHTML(selectedVehicle.status || "available")}</span></p>
                 ${schedulesHtml}
             </div>
@@ -126,7 +262,10 @@ async function loadVehicle() {
             `;
             if (bookingForm) bookingForm.style.display = "none";
         } else {
-            if (bookingForm) bookingForm.style.display = "block";
+            const isEmailOk = await verifyEmailGate(auth.currentUser);
+            if (isEmailOk) {
+                if (bookingForm) bookingForm.style.display = "block";
+            }
             setMinDateLimits();
         }
 
@@ -142,7 +281,7 @@ async function loadVehicle() {
     }
 }
 
-// Calculate duration and total on date change
+// Calculate duration, 25% advance, and price estimate on date changes
 function updatePriceEstimate() {
     const startDate = document.getElementById("start_date")?.value;
     const endDate = document.getElementById("end_date")?.value;
@@ -158,12 +297,26 @@ function updatePriceEstimate() {
 
     if (end <= start) {
         if (estimateElem) {
-            estimateElem.innerHTML = `<span style="color:#e53e3e; font-weight: 500;">End date must be after start date</span>`;
+            estimateElem.innerHTML = `<div style="color:#e53e3e; font-weight: 500; font-size:0.9rem;">⚠️ End date must be after start date</div>`;
         }
         return;
     }
 
-    // Check for overlap with active schedules
+    const days = Math.round((end - start) / (1000 * 60 * 60 * 24));
+
+    // Rental duration rule: 1 to 7 days
+    if (days < 1 || days > 7) {
+        if (estimateElem) {
+            estimateElem.innerHTML = `
+                <div style="background: #fff5f5; border: 1px solid #feb2b2; color: #c53030; padding: 10px; border-radius: 6px; font-size: 0.88rem;">
+                    ⚠️ <strong>Invalid Rental Duration:</strong> Rentals must be between <strong>1 and 7 consecutive days</strong>. (You selected <strong>${days} days</strong>).
+                </div>
+            `;
+        }
+        return;
+    }
+
+    // Check for overlap with active confirmed schedules
     const conflict = activeSchedules.find(s => {
         const sStatus = String(s.status || "").toLowerCase();
         if (sStatus !== "confirmed") return false;
@@ -173,7 +326,7 @@ function updatePriceEstimate() {
     if (conflict) {
         if (estimateElem) {
             estimateElem.innerHTML = `
-                <div style="background:#fff5f5; color:#c53030; padding:10px; border-radius:6px; margin: 12px 0; border:1px solid #feb2b2;">
+                <div style="background:#fff5f5; color:#c53030; padding:10px; border-radius:6px; margin: 12px 0; border:1px solid #feb2b2; font-size: 0.88rem;">
                     ⚠️ <strong>Dates Unavailable:</strong> Conflicting reservation exists from <strong>${escapeHTML(conflict.start_date)}</strong> to <strong>${escapeHTML(conflict.end_date)}</strong>. Please pick alternative dates.
                 </div>
             `;
@@ -181,16 +334,32 @@ function updatePriceEstimate() {
         return;
     }
 
-    const days = Math.round((end - start) / (1000 * 60 * 60 * 24));
     const price = Number(selectedVehicle.price_per_day || 0);
     const total = days * price;
+    const advance = Math.round(total * 0.25);
+    const balance = total - advance;
 
     if (estimateElem) {
         estimateElem.innerHTML = `
-            <div style="background:#f7fafc; padding:12px; border-radius:6px; margin: 12px 0; border:1px solid #e2e8f0;">
-                <p><strong>Rental Duration:</strong> ${days} ${days === 1 ? 'day' : 'days'}</p>
-                <p><strong>Estimated Total:</strong> <span style="font-size:1.2rem; color:#2b6cb0; font-weight:bold;">₹${total.toLocaleString("en-IN")}</span></p>
-                <small style="color:#38a169;">✓ Dates available for booking</small>
+            <div style="background:#f8fafc; padding:16px; border-radius:8px; border:1px solid #e2e8f0;">
+                <h4 style="color: #1e293b; margin-bottom: 8px; font-size: 0.95rem;">💰 Rental &amp; Payment Breakdown</h4>
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; font-size: 0.88rem;">
+                    <div><strong>Duration:</strong> ${days} ${days === 1 ? 'day' : 'days'}</div>
+                    <div><strong>Daily Rate:</strong> ₹${price.toLocaleString("en-IN")}/day</div>
+                    <div><strong>Total Rental:</strong> <span style="font-weight:700; color:#1e293b;">₹${total.toLocaleString("en-IN")}</span></div>
+                </div>
+                <div style="margin-top: 12px; padding-top: 10px; border-top: 1px dashed #cbd5e1; display: flex; flex-wrap: wrap; gap: 16px; font-size: 0.9rem;">
+                    <div style="background: #eff6ff; padding: 6px 12px; border-radius: 6px; border: 1px solid #bfdbfe;">
+                        <span style="color: #1e40af; font-weight: 600;">25% Advance Required:</span>
+                        <strong style="color: #2563eb; font-size: 1.1rem; margin-left: 4px;">₹${advance.toLocaleString("en-IN")}</strong>
+                        <small style="display:block; color:#60a5fa; font-size: 0.75rem;">Payable after document approval</small>
+                    </div>
+                    <div style="background: #f1f5f9; padding: 6px 12px; border-radius: 6px; border: 1px solid #e2e8f0;">
+                        <span style="color: #475569; font-weight: 600;">Remaining 75% Balance:</span>
+                        <strong style="color: #0f172a; font-size: 1.1rem; margin-left: 4px;">₹${balance.toLocaleString("en-IN")}</strong>
+                        <small style="display:block; color:#64748b; font-size: 0.75rem;">Payable at vehicle pickup hub</small>
+                    </div>
+                </div>
             </div>
         `;
     }
@@ -199,6 +368,58 @@ function updatePriceEstimate() {
 // Add event listeners for dynamic price calculation
 document.getElementById("start_date")?.addEventListener("change", updatePriceEstimate);
 document.getElementById("end_date")?.addEventListener("change", updatePriceEstimate);
+
+// Email gate button handlers
+if (gateResendBtn) {
+    gateResendBtn.addEventListener("click", async function () {
+        const user = auth.currentUser;
+        if (!user) return;
+        gateResendBtn.disabled = true;
+        gateActionStatus.textContent = "Sending...";
+        gateActionStatus.style.color = "#475569";
+        try {
+            await user.sendEmailVerification();
+            gateActionStatus.textContent = "✓ Email sent! Please check your inbox.";
+            gateActionStatus.style.color = "#16a34a";
+        } catch (err) {
+            console.error("Resend verification error:", err);
+            gateActionStatus.textContent = "Could not send: " + err.message;
+            gateActionStatus.style.color = "#dc2626";
+        } finally {
+            setTimeout(() => { gateResendBtn.disabled = false; }, 6000);
+        }
+    });
+}
+
+if (gateCheckStatusBtn) {
+    gateCheckStatusBtn.addEventListener("click", async function () {
+        const user = auth.currentUser;
+        if (!user) return;
+        gateCheckStatusBtn.disabled = true;
+        gateActionStatus.textContent = "Checking status...";
+        gateActionStatus.style.color = "#475569";
+        try {
+            await user.reload();
+            if (user.emailVerified) {
+                gateActionStatus.textContent = "✓ Email verified! Unlocking booking form...";
+                gateActionStatus.style.color = "#16a34a";
+                setTimeout(() => {
+                    emailGateBanner.style.display = "none";
+                    if (bookingForm) bookingForm.style.display = "block";
+                    setMinDateLimits();
+                }, 1000);
+            } else {
+                gateActionStatus.textContent = "Still not verified. Please click the link in your email.";
+                gateActionStatus.style.color = "#d97706";
+            }
+        } catch (err) {
+            gateActionStatus.textContent = "Status check error: " + err.message;
+            gateActionStatus.style.color = "#dc2626";
+        } finally {
+            gateCheckStatusBtn.disabled = false;
+        }
+    });
+}
 
 // Handle booking creation
 if (bookingForm) {
@@ -212,18 +433,26 @@ if (bookingForm) {
             return;
         }
 
+        // Re-check email verification gate
+        await user.reload();
+        if (!user.emailVerified) {
+            alert("Email verification is mandatory before submitting a vehicle booking.");
+            verifyEmailGate(user);
+            return;
+        }
+
         if (!selectedVehicle) {
-            bookingMessage.textContent = "Vehicle details are not available.";
-            bookingMessage.style.color = "red";
+            bookingMessage.innerHTML = `<div style="color:red;">Vehicle details are not available.</div>`;
             return;
         }
 
         const startDate = document.getElementById("start_date").value;
         const endDate = document.getElementById("end_date").value;
+        const idType = document.getElementById("idTypeSelect")?.value || "Aadhaar Card";
+        const consentCheckbox = document.getElementById("consentCheckbox");
 
         if (!startDate || !endDate) {
-            bookingMessage.textContent = "Please select both start and end dates.";
-            bookingMessage.style.color = "red";
+            showBookingError("Please select both start and end rental dates.");
             return;
         }
 
@@ -231,23 +460,41 @@ if (bookingForm) {
         const end = new Date(endDate + "T00:00:00");
 
         if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime()) || end <= start) {
-            bookingMessage.textContent = "End date must be after the start date.";
-            bookingMessage.style.color = "red";
+            showBookingError("End date must be after the start date.");
             return;
         }
 
         const rentalDays = Math.round((end - start) / (1000 * 60 * 60 * 24));
-        const submitButton = bookingForm.querySelector('button[type="submit"]');
-
-        if (submitButton) {
-            submitButton.disabled = true;
+        if (rentalDays < 1 || rentalDays > 7) {
+            showBookingError(`Rental duration must be between 1 and 7 consecutive days. You requested ${rentalDays} days.`);
+            return;
         }
 
-        bookingMessage.textContent = "Validating dates and confirming booking...";
-        bookingMessage.style.color = "black";
+        // Validate document uploads
+        if (!compressedIdDoc) {
+            showBookingError(`Please upload a clear copy of your ${idType}.`);
+            return;
+        }
+
+        if (!compressedDlDoc) {
+            showBookingError("Please upload a clear copy of your Driving Licence (DL).");
+            return;
+        }
+
+        if (!consentCheckbox || !consentCheckbox.checked) {
+            showBookingError("You must agree to the mandatory document verification consent checkbox.");
+            return;
+        }
+
+        if (submitBookingBtn) {
+            submitBookingBtn.disabled = true;
+            submitBookingBtn.textContent = "Uploading & Submitting Reservation Request...";
+        }
+
+        bookingMessage.innerHTML = `<div style="color:#2563eb; font-weight:500;">Validating fleet availability and submitting documents...</div>`;
 
         try {
-            // 1. Fresh conflict check against confirmed schedules in Firestore
+            // Fresh conflict check against confirmed schedules in Firestore
             const freshSchedSnap = await db.collection("vehicles")
                 .doc(vehicleId)
                 .collection("schedules")
@@ -274,17 +521,30 @@ if (bookingForm) {
             }
 
             const totalAmount = rentalDays * pricePerDay;
+            const advanceAmount = Math.round(totalAmount * 0.25);
+            const balanceAmount = totalAmount - advanceAmount;
             const category = String(selectedVehicle.category || "car").toLowerCase();
 
-            // 2. Generate unified booking ID
+            // Fetch customer profile from Firestore for phone number
+            let customerPhone = "";
+            try {
+                const uDoc = await db.collection("users").doc(user.uid).get();
+                if (uDoc.exists) {
+                    customerPhone = uDoc.data().phone || "";
+                }
+            } catch (uErr) {
+                console.warn("Could not read customer phone:", uErr);
+            }
+
+            // Generate unified booking document
             const newBookingRef = db.collection("bookings").doc();
             const bookingId = newBookingRef.id;
 
-            // 3. Write private booking record
-            await newBookingRef.set({
+            const bookingPayload = {
                 userId: user.uid,
                 customerName: user.displayName || user.email.split("@")[0],
                 customerEmail: user.email,
+                customerPhone: customerPhone,
                 vehicleId: vehicleId,
                 model: selectedVehicle.model || "",
                 vehicle_number: selectedVehicle.vehicle_number || "",
@@ -296,11 +556,22 @@ if (bookingForm) {
                 rental_days: rentalDays,
                 price_per_day: pricePerDay,
                 total_amount: totalAmount,
-                status: "Confirmed",
+                advance_amount: advanceAmount,
+                balance_amount: balanceAmount,
+                id_type: idType,
+                id_document: compressedIdDoc,
+                dl_document: compressedDlDoc,
+                consent_accepted: true,
+                consent_timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+                verification_status: "Pending Review",
+                payment_status: "Awaiting Approval",
+                status: "Pending Review",
                 createdAt: firebase.firestore.FieldValue.serverTimestamp()
-            });
+            };
 
-            // 4. Write public schedule slot under vehicle for availability tracking
+            await newBookingRef.set(bookingPayload);
+
+            // Also create a pending schedule reservation in the vehicle's subcollection
             await db.collection("vehicles")
                 .doc(vehicleId)
                 .collection("schedules")
@@ -309,20 +580,46 @@ if (bookingForm) {
                     userId: user.uid,
                     start_date: startDate,
                     end_date: endDate,
-                    status: "Confirmed",
+                    status: "Pending Review",
                     createdAt: firebase.firestore.FieldValue.serverTimestamp()
                 });
 
+            // Write in-app notification to customer
+            await db.collection("users").doc(user.uid).collection("notifications").add({
+                title: "Booking Request Submitted",
+                message: `Your booking request for ${selectedVehicle.model} (${startDate} to ${endDate}) has been submitted for manual document review.`,
+                type: "booking",
+                bookingId: bookingId,
+                read: false,
+                createdAt: firebase.firestore.FieldValue.serverTimestamp()
+            }).catch(e => console.warn("Could not create user notification:", e));
+
             bookingMessage.innerHTML = `
-                <div class="info-card" style="border-left: 4px solid #38a169;">
-                    <h3 style="color:#2f855a; margin-top:0;">🎉 Booking Confirmed Successfully!</h3>
-                    <p><strong>Booking ID:</strong> <code>${escapeHTML(bookingId)}</code></p>
-                    <p><strong>Vehicle:</strong> ${escapeHTML(selectedVehicle.model)} (${escapeHTML(selectedVehicle.vehicle_number)})</p>
-                    <p><strong>Rental Duration:</strong> ${rentalDays} days (${escapeHTML(startDate)} to ${escapeHTML(endDate)})</p>
-                    <p><strong>Total Amount:</strong> <strong style="color:#2f855a;">₹${totalAmount.toLocaleString("en-IN")}</strong></p>
-                    <p><strong>Status:</strong> <span class="admin-status booked">Confirmed</span></p>
-                    <br>
-                    <a href="my-bookings.html" class="primary-btn">View in My Bookings</a>
+                <div class="info-card" style="border-left: 4px solid #2563eb; background: #f8fafc; padding: 20px;">
+                    <h3 style="color:#1d4ed8; margin-top:0;">📋 Booking Request Submitted for Review!</h3>
+                    <p style="font-size: 0.95rem; line-height: 1.6;">
+                        Your reservation request for <strong>${escapeHTML(selectedVehicle.model)} (${escapeHTML(selectedVehicle.vehicle_number)})</strong> has been logged.
+                    </p>
+                    <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; padding: 14px; margin: 12px 0; font-size: 0.88rem;">
+                        <p><strong>Booking Reference:</strong> <code>${escapeHTML(bookingId)}</code></p>
+                        <p><strong>Rental Duration:</strong> ${rentalDays} days (${escapeHTML(startDate)} → ${escapeHTML(endDate)})</p>
+                        <p><strong>Total Rental:</strong> ₹${totalAmount.toLocaleString("en-IN")}</p>
+                        <p><strong>25% Advance to Pay:</strong> <strong style="color: #2563eb;">₹${advanceAmount.toLocaleString("en-IN")}</strong></p>
+                        <p><strong>Current Status:</strong> <span class="admin-status pending_review">Pending Review</span></p>
+                    </div>
+
+                    <div style="background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 6px; padding: 12px; margin-bottom: 16px; font-size: 0.85rem; color: #1e40af;">
+                        <strong>Next Steps:</strong>
+                        <ol style="margin-left: 18px; margin-top: 4px;">
+                            <li>Our administrative team will review your ${idType} and Driving Licence.</li>
+                            <li>Once approved, you will receive an in-app notice to complete the 25% advance payment (₹${advanceAmount.toLocaleString("en-IN")}).</li>
+                            <li>After your advance payment is verified, your vehicle lock is confirmed!</li>
+                        </ol>
+                    </div>
+
+                    <a href="my-bookings.html" class="primary-btn" style="display:inline-block; padding: 10px 20px; text-decoration: none;">
+                        Track in My Bookings →
+                    </a>
                 </div>
             `;
 
@@ -330,28 +627,37 @@ if (bookingForm) {
 
         } catch (error) {
             console.error("Booking error:", error);
-            bookingMessage.innerHTML = `
-                <div style="color: #e53e3e; background: #fff5f5; padding: 12px; border-radius: 6px; border: 1px solid #feb2b2;">
-                    <strong>Booking Failed:</strong> ${escapeHTML(error.message || "Unable to complete booking. Please try again.")}
-                </div>
-            `;
+            showBookingError(error.message || "Unable to complete booking. Please try again.");
         } finally {
-            if (submitButton) {
-                submitButton.disabled = false;
+            if (submitBookingBtn) {
+                submitBookingBtn.disabled = false;
+                submitBookingBtn.textContent = "Submit Booking Request for Verification";
             }
         }
     });
 }
 
-// Authentication state listener
+function showBookingError(msg) {
+    bookingMessage.innerHTML = `
+        <div style="color: #991b1b; background: #fef2f2; padding: 14px; border-radius: 8px; border: 1px solid #fecaca; font-size: 0.9rem;">
+            ⚠️ <strong>Booking Submission Failed:</strong> ${escapeHTML(msg)}
+        </div>
+    `;
+}
+
+// Authentication state listener & initial setup
 if (auth) {
-    auth.onAuthStateChanged(function (user) {
+    auth.onAuthStateChanged(async function (user) {
         if (user) {
-            loadVehicle();
+            setupDocumentUploadListeners();
+            await loadVehicle();
         } else {
             window.location.href = "login.html";
         }
     });
 } else {
-    document.addEventListener("DOMContentLoaded", loadVehicle);
+    document.addEventListener("DOMContentLoaded", () => {
+        setupDocumentUploadListeners();
+        loadVehicle();
+    });
 }

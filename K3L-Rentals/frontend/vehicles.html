@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Vehicles - K3L Rentals</title>
+    <title>Fleet Catalog - K3L Rentals</title>
     <link rel="stylesheet" href="css/style.css">
 </head>
 
@@ -12,52 +12,81 @@
 
 <header class="navbar">
     <div class="logo">
-        K3L RENTALS
+        🚗 K3L <span>RENTALS</span>
     </div>
-
     <nav>
         <a href="index.html">Home</a>
         <a href="vehicles.html">Vehicles</a>
         <a href="my-bookings.html" id="bookingsLink" class="hidden">My Bookings</a>
         <a href="login.html" id="loginLink">Login</a>
         <a href="register.html" id="registerLink">Register</a>
+        <span id="userGreeting" style="font-size: 0.9rem; color: #93c5fd; margin: 0 8px;"></span>
         <button id="logoutBtn" class="nav-btn hidden">Logout</button>
     </nav>
 </header>
 
 <section class="section">
-    <h1>Browse Vehicles</h1>
-    <p class="section-subtitle">
-        Explore our verified fleet of cars and bikes across Coimbatore, Erode, and Salem.
-    </p>
+    <div style="margin-bottom: 20px;">
+        <h1>Explore Vehicle Fleet</h1>
+        <p class="section-subtitle">
+            Browse verified cars and bikes across Coimbatore, Erode, and Salem hubs.
+        </p>
+    </div>
 
-    <div class="filter-bar" style="display:flex; flex-wrap:wrap; gap:12px; align-items:center;">
-        <input type="text" id="searchInput" placeholder="Search model, number, or city..." style="flex:1; min-width:200px;">
+    <!-- Upfront Rental Rules Banner -->
+    <div style="background: #eff6ff; border: 1px solid #bfdbfe; border-radius: var(--radius-md); padding: 14px 18px; margin-bottom: 24px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px;">
+        <div style="display: flex; gap: 20px; flex-wrap: wrap; font-size: 0.85rem; color: #1e40af;">
+            <span>🔞 <strong>Age 18+ &amp; DL:</strong> Mandatory</span>
+            <span>⏱️ <strong>Duration:</strong> 1 to 7 Days</span>
+            <span>🪪 <strong>ID Proof:</strong> Aadhaar or PAN</span>
+            <span>💳 <strong>Deposit:</strong> 25% Advance upon Approval</span>
+        </div>
+        <div style="font-size: 0.82rem; color: #3b82f6;">
+            Tamil Nadu Hubs: Coimbatore • Erode • Salem
+        </div>
+    </div>
 
-        <select id="categoryFilter" style="min-width:140px;">
+    <!-- Filter Bar -->
+    <div class="filter-bar" style="display: flex; flex-wrap: wrap; gap: 12px; align-items: center;">
+        <input type="text" id="searchInput" placeholder="Search model, number, or hub..." style="flex: 1; min-width: 200px;">
+
+        <select id="categoryFilter" style="min-width: 140px;">
             <option value="all">All Categories</option>
             <option value="car">🚗 Cars</option>
             <option value="bike">🏍️ Bikes</option>
         </select>
 
-        <select id="typeFilter" style="min-width:140px;">
+        <select id="typeFilter" style="min-width: 140px;">
             <option value="all">All Types</option>
         </select>
 
+        <select id="locationFilter" style="min-width: 140px;">
+            <option value="all">All Locations</option>
+            <option value="coimbatore">Coimbatore</option>
+            <option value="erode">Erode</option>
+            <option value="salem">Salem</option>
+        </select>
+
+        <select id="sortFilter" style="min-width: 140px;">
+            <option value="default">Sort by: Default</option>
+            <option value="price_asc">Price: Low to High</option>
+            <option value="price_desc">Price: High to Low</option>
+        </select>
+
         <!-- Date-based availability filter -->
-        <div style="display:flex; align-items:center; gap:6px; background:#f7fafc; padding:4px 10px; border-radius:6px; border:1px solid #e2e8f0;">
-            <label for="filterStartDate" style="font-size:0.85rem; font-weight:600; color:#4a5568; margin:0;">From:</label>
-            <input type="date" id="filterStartDate" style="padding:6px 10px; border:1px solid #cbd5e0; border-radius:4px; font-size:0.85rem;">
-            <label for="filterEndDate" style="font-size:0.85rem; font-weight:600; color:#4a5568; margin:0;">To:</label>
-            <input type="date" id="filterEndDate" style="padding:6px 10px; border:1px solid #cbd5e0; border-radius:4px; font-size:0.85rem;">
+        <div style="display: flex; align-items: center; gap: 6px; background: #f8fafc; padding: 4px 10px; border-radius: 6px; border: 1px solid #cbd5e1;">
+            <label for="filterStartDate" style="font-size: 0.82rem; font-weight: 600; color: #475569; margin: 0;">Dates:</label>
+            <input type="date" id="filterStartDate" style="padding: 6px 8px; border: 1px solid #cbd5e1; border-radius: 4px; font-size: 0.82rem;">
+            <span style="color: #94a3b8;">→</span>
+            <input type="date" id="filterEndDate" style="padding: 6px 8px; border: 1px solid #cbd5e1; border-radius: 4px; font-size: 0.82rem;">
         </div>
 
-        <button id="clearFiltersBtn" class="secondary-btn" style="padding:8px 14px; font-size:0.85rem;">
-            Clear Filters
+        <button id="clearFiltersBtn" class="secondary-btn" style="padding: 8px 14px; font-size: 0.85rem;">
+            Reset
         </button>
     </div>
 
-    <div id="filterStatusMessage" style="margin: 8px 0; font-size: 0.9rem; color: #4a5568;"></div>
+    <div id="filterStatusMessage" style="margin: 8px 0 16px; font-size: 0.9rem; color: var(--slate-600);"></div>
 
     <div id="vehicleContainer" class="vehicle-grid">
         <p>Loading fleet vehicles...</p>
@@ -69,11 +98,10 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 
-<!-- Firebase configuration -->
 <script src="js/firebase-config.js"></script>
-
-<!-- Existing scripts -->
 <script src="js/common.js"></script>
+<script src="js/notifications.js"></script>
+<script src="js/chatbot.js"></script>
 <script src="js/vehicles.js"></script>
 
 </body>

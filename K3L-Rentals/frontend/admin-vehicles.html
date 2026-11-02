@@ -1,63 +1,55 @@
-
 <!DOCTYPE html>
 <html lang="en">
 
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-    <title>Manage Vehicles - K3L Rentals</title>
+    <title>Manage Vehicles - K3L Rentals Admin</title>
     <link rel="stylesheet" href="css/style.css">
 </head>
 
 <body>
 
 <header class="navbar">
-    <div class="logo">K3L RENTALS</div>
-
+    <div class="logo">
+        🚗 K3L <span>ADMIN</span>
+    </div>
     <nav>
         <a href="admin-dashboard.html">Dashboard</a>
-        <a href="admin-vehicles.html">Vehicles</a>
+        <a href="admin-verification.html">Verification</a>
+        <a href="admin-vehicles.html" style="color: #60a5fa; font-weight: 600;">Vehicles</a>
         <a href="admin-bookings.html">Bookings</a>
         <a href="admin-customers.html">Customers</a>
         <a href="admin-fleet.html">Fleet</a>
         <a href="admin-maintenance.html">Maintenance</a>
         <a href="admin-reports.html">Reports</a>
-
         <button id="logoutBtn" class="nav-btn">Logout</button>
     </nav>
 </header>
 
 <section class="section">
-
     <div class="admin-page-header">
         <div>
-            <h1>Manage Vehicles</h1>
+            <h1>Manage Fleet Vehicles</h1>
             <p class="section-subtitle">
-                Add, edit and manage rental cars and bikes.
+                Add, edit and manage rental cars and bikes across Coimbatore, Erode, and Salem hubs.
             </p>
         </div>
-
         <button id="showAddFormBtn" class="primary-btn">
             + Add Vehicle
         </button>
     </div>
 
     <!-- ADD / EDIT FORM -->
-
-    <div id="vehicleFormContainer" class="admin-form-card hidden">
-
+    <div id="vehicleFormContainer" class="admin-form-card hidden" style="background: white; padding: 22px; border-radius: 10px; border: 1px solid var(--slate-200); margin-bottom: 24px;">
         <h2 id="formTitle">Add Vehicle</h2>
-
         <form id="vehicleForm">
-
             <input type="hidden" id="vehicleId">
 
-            <div class="form-grid">
-
+            <div class="form-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 14px; margin: 16px 0;">
                 <div>
-                    <label for="category">Vehicle Category</label>
-                    <select id="category" required>
+                    <label for="category">Vehicle Category *</label>
+                    <select id="category" required style="width: 100%; padding: 8px;">
                         <option value="">Select Category</option>
                         <option value="car">Car</option>
                         <option value="bike">Bike</option>
@@ -65,53 +57,57 @@
                 </div>
 
                 <div>
-                    <label for="vehicle_number">Vehicle Number</label>
+                    <label for="vehicle_number">Vehicle Registration Number *</label>
                     <input
                         type="text"
                         id="vehicle_number"
-                        placeholder="TN38AB1234"
-                        required>
+                        placeholder="e.g. TN38AB1234"
+                        required
+                        style="width: 100%; padding: 8px;">
                 </div>
 
                 <div>
-                    <label for="model">Model</label>
+                    <label for="model">Model Name *</label>
                     <input
                         type="text"
                         id="model"
-                        placeholder="Toyota Innova"
-                        required>
+                        placeholder="e.g. Toyota Innova Crysta"
+                        required
+                        style="width: 100%; padding: 8px;">
                 </div>
 
                 <div>
-                    <label for="type">Vehicle Type</label>
-                    <select id="type" required>
+                    <label for="type">Vehicle Classification *</label>
+                    <select id="type" required style="width: 100%; padding: 8px;">
                         <option value="">Select Type</option>
                     </select>
                 </div>
 
                 <div>
-                    <label for="price_per_day">Price Per Day (₹)</label>
+                    <label for="price_per_day">Daily Rate (₹) *</label>
                     <input
                         type="number"
                         id="price_per_day"
                         min="1"
-                        step="0.01"
-                        placeholder="2500"
-                        required>
+                        step="1"
+                        placeholder="e.g. 2500"
+                        required
+                        style="width: 100%; padding: 8px;">
                 </div>
 
                 <div>
-                    <label for="location">Location</label>
+                    <label for="location">Regional Hub Hub *</label>
                     <input
                         type="text"
                         id="location"
-                        placeholder="Coimbatore"
-                        required>
+                        placeholder="e.g. Coimbatore"
+                        required
+                        style="width: 100%; padding: 8px;">
                 </div>
 
                 <div>
-                    <label for="status">Status</label>
-                    <select id="status">
+                    <label for="status">Operational Status</label>
+                    <select id="status" style="width: 100%; padding: 8px;">
                         <option value="available">Available</option>
                         <option value="maintenance">Maintenance</option>
                         <option value="booked">Booked</option>
@@ -119,50 +115,39 @@
                     </select>
                 </div>
 
-                <div class="form-full">
-                    <label for="image">Image File Name</label>
+                <div class="form-full" style="grid-column: 1 / -1;">
+                    <label for="image">Image URL / File Name</label>
                     <input
                         type="text"
                         id="image"
-                        placeholder="innova.jpg">
-
-                    <small>Example: innova.jpg</small>
+                        placeholder="e.g. https://... or innova.jpg"
+                        style="width: 100%; padding: 8px;">
                 </div>
-
             </div>
 
-            <div class="form-buttons">
-
+            <div class="form-buttons" style="display: flex; gap: 10px;">
                 <button type="submit" class="primary-btn">
                     Save Vehicle
                 </button>
-
                 <button
                     type="button"
                     id="cancelFormBtn"
                     class="secondary-btn">
                     Cancel
                 </button>
-
             </div>
 
-            <p id="formMessage"></p>
-
+            <p id="formMessage" style="margin-top: 10px;"></p>
         </form>
     </div>
 
     <!-- VEHICLE LIST -->
-
     <div class="admin-table-container">
-
-        <h2>All Vehicles</h2>
-
+        <h2>Fleet Inventory</h2>
         <div id="vehicleTableContainer">
-            <p>Loading vehicles...</p>
+            <p>Loading fleet vehicles...</p>
         </div>
-
     </div>
-
 </section>
 
 <!-- Firebase SDK -->
@@ -170,10 +155,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 
-<!-- Firebase Configuration -->
 <script src="js/firebase-config.js"></script>
-
-<!-- Existing JavaScript -->
 <script src="js/common.js"></script>
 <script src="js/admin-vehicles.js"></script>
 

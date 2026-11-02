@@ -2,295 +2,123 @@
 <html lang="en">
 
 <head>
-
     <meta charset="UTF-8">
-
-    <meta
-        name="viewport"
-        content="width=device-width, initial-scale=1.0"
-    >
-
-    <title>Maintenance Management - K3L Rentals</title>
-
-    <link
-        rel="stylesheet"
-        href="css/style.css"
-    >
-
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Maintenance Management - K3L Rentals Admin</title>
+    <link rel="stylesheet" href="css/style.css">
 </head>
 
 <body>
 
-    <!-- NAVBAR -->
-
-    <nav class="navbar">
-
-        <div class="logo">
-            K3L RENTALS
-        </div>
-
-        <div class="nav-links">
-
-            <a href="admin-dashboard.html">
-                Dashboard
-            </a>
-
-            <a href="admin-vehicles.html">
-                Vehicles
-            </a>
-
-            <a href="admin-bookings.html">
-                Bookings
-            </a>
-
-            <a href="admin-customers.html">
-                Customers
-            </a>
-
-            <a href="admin-fleet.html">
-                Fleet
-            </a>
-
-            <a href="admin-maintenance.html">
-                Maintenance
-            </a>
-
-            <a href="admin-reports.html">
-                Reports
-            </a>
-
-            <button
-                id="logoutBtn"
-                class="logout-btn"
-            >
-                Logout
-            </button>
-
-        </div>
-
+<header class="navbar">
+    <div class="logo">
+        🚗 K3L <span>ADMIN</span>
+    </div>
+    <nav>
+        <a href="admin-dashboard.html">Dashboard</a>
+        <a href="admin-verification.html">Verification</a>
+        <a href="admin-vehicles.html">Vehicles</a>
+        <a href="admin-bookings.html">Bookings</a>
+        <a href="admin-customers.html">Customers</a>
+        <a href="admin-fleet.html">Fleet</a>
+        <a href="admin-maintenance.html" style="color: #60a5fa; font-weight: 600;">Maintenance</a>
+        <a href="admin-reports.html">Reports</a>
+        <button id="logoutBtn" class="nav-btn">Logout</button>
     </nav>
+</header>
 
-
-    <!-- MAIN -->
-
-    <main class="section">
-
-        <div class="admin-page-header">
-
-            <div>
-
-                <h1>
-                    Maintenance Management
-                </h1>
-
-                <p>
-                    Manage vehicle service and maintenance records.
-                </p>
-
-            </div>
-
-            <button
-                id="addMaintenanceBtn"
-                class="primary-btn"
-            >
-                + Add Maintenance
-            </button>
-
+<main class="section">
+    <div class="admin-page-header">
+        <div>
+            <h1>Fleet Maintenance &amp; Servicing</h1>
+            <p class="section-subtitle">
+                Manage vehicle servicing, oil changes, tire rotations, and scheduled repairs.
+            </p>
         </div>
+        <button id="addMaintenanceBtn" class="primary-btn">
+            + Add Maintenance Record
+        </button>
+    </div>
 
+    <!-- ADD / EDIT FORM -->
+    <div id="maintenanceFormContainer" class="admin-form-card hidden" style="background: white; padding: 20px; border-radius: 10px; border: 1px solid var(--slate-200); margin-bottom: 24px;">
+        <h2 id="maintenanceFormTitle">Add Maintenance Record</h2>
 
-        <!-- ADD / EDIT FORM -->
+        <form id="maintenanceForm">
+            <input type="hidden" id="maintenanceId">
 
-        <div
-            id="maintenanceFormContainer"
-            class="admin-form-card hidden"
-        >
-
-            <h2 id="maintenanceFormTitle">
-                Add Maintenance Record
-            </h2>
-
-
-            <form id="maintenanceForm">
-
-                <input
-                    type="hidden"
-                    id="maintenanceId"
-                >
-
-
-                <div class="form-grid">
-
-
-                    <!-- VEHICLE -->
-
-                    <div class="form-group">
-
-                        <label for="vehicle_id">
-                            Vehicle
-                        </label>
-
-                        <select
-                            id="vehicle_id"
-                            required
-                        >
-
-                            <option value="">
-                                Select Vehicle
-                            </option>
-
-                        </select>
-
-                    </div>
-
-
-                    <!-- SERVICE DATE -->
-
-                    <div class="form-group">
-
-                        <label for="service_date">
-                            Service Date
-                        </label>
-
-                        <input
-                            type="date"
-                            id="service_date"
-                            required
-                        >
-
-                    </div>
-
-
-                    <!-- NEXT SERVICE DATE -->
-
-                    <div class="form-group">
-
-                        <label for="next_service_date">
-                            Next Service Date
-                        </label>
-
-                        <input
-                            type="date"
-                            id="next_service_date"
-                            required
-                        >
-
-                    </div>
-
-
-                    <!-- STATUS -->
-
-                    <div class="form-group">
-
-                        <label for="maintenance_status">
-                            Status
-                        </label>
-
-                        <select
-                            id="maintenance_status"
-                            required
-                        >
-
-                            <option value="scheduled">
-                                Scheduled
-                            </option>
-
-                            <option value="in_progress">
-                                In Progress
-                            </option>
-
-                            <option value="completed">
-                                Completed
-                            </option>
-
-                        </select>
-
-                    </div>
-
-
-                    <!-- DESCRIPTION -->
-
-                    <div class="form-group form-full">
-
-                        <label for="description">
-                            Description
-                        </label>
-
-                        <textarea
-                            id="description"
-                            rows="4"
-                            placeholder="Enter maintenance details..."
-                            required
-                        ></textarea>
-
-                    </div>
-
+            <div class="form-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 14px; margin: 16px 0;">
+                <div class="form-group">
+                    <label for="vehicleSelect">Select Fleet Vehicle *</label>
+                    <select id="vehicleSelect" required style="width: 100%; padding: 8px;">
+                        <option value="">Select vehicle...</option>
+                    </select>
                 </div>
 
-
-                <div
-                    id="maintenanceFormMessage"
-                    class="form-message"
-                ></div>
-
-
-                <div class="form-buttons">
-
-                    <button
-                        type="submit"
-                        class="primary-btn"
-                    >
-                        Save Maintenance
-                    </button>
-
-                    <button
-                        type="button"
-                        id="cancelMaintenance"
-                        class="secondary-btn"
-                    >
-                        Cancel
-                    </button>
-
+                <div class="form-group">
+                    <label for="serviceType">Service Type *</label>
+                    <input type="text" id="serviceType" placeholder="e.g. Periodic Service, Brake Pad Replacement" required style="width: 100%; padding: 8px;">
                 </div>
 
-            </form>
+                <div class="form-group">
+                    <label for="maintenanceCost">Estimated Cost (₹) *</label>
+                    <input type="number" id="maintenanceCost" min="0" placeholder="e.g. 4500" required style="width: 100%; padding: 8px;">
+                </div>
 
-        </div>
+                <div class="form-group">
+                    <label for="startDate">Service Start Date *</label>
+                    <input type="date" id="startDate" required style="width: 100%; padding: 8px;">
+                </div>
 
+                <div class="form-group">
+                    <label for="endDate">Expected Return Date</label>
+                    <input type="date" id="endDate" style="width: 100%; padding: 8px;">
+                </div>
 
-        <!-- MAINTENANCE TABLE -->
+                <div class="form-group">
+                    <label for="maintenanceStatus">Status</label>
+                    <select id="maintenanceStatus" required style="width: 100%; padding: 8px;">
+                        <option value="in_progress">In Progress</option>
+                        <option value="scheduled">Scheduled</option>
+                        <option value="completed">Completed</option>
+                    </select>
+                </div>
 
-        <div
-            id="maintenanceTableContainer"
-            class="admin-table-container"
-        >
-
-            <div class="info-card">
-
-                <h3>
-                    Loading maintenance records...
-                </h3>
-
+                <div class="form-group form-full" style="grid-column: 1 / -1;">
+                    <label for="description">Maintenance Notes &amp; Checklist</label>
+                    <textarea id="description" rows="3" placeholder="Enter workshop name, parts replaced, invoice number..." required style="width: 100%; padding: 8px; border: 1px solid var(--slate-300); border-radius: 6px;"></textarea>
+                </div>
             </div>
 
+            <div id="maintenanceFormMessage" class="form-message" style="margin-bottom: 12px;"></div>
+
+            <div class="form-buttons" style="display: flex; gap: 10px;">
+                <button type="submit" class="primary-btn">
+                    Save Record
+                </button>
+                <button type="button" id="cancelMaintenance" class="secondary-btn">
+                    Cancel
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <!-- MAINTENANCE TABLE -->
+    <div id="maintenanceTableContainer" class="admin-table-container">
+        <div class="info-card">
+            <h3>Loading maintenance logs...</h3>
         </div>
+    </div>
+</main>
 
-    </main>
-
-
- 
 <!-- Firebase SDK -->
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 
-<!-- Firebase Configuration -->
 <script src="js/firebase-config.js"></script>
-
-<!-- Existing JavaScript -->
 <script src="js/common.js"></script>
 <script src="js/admin-maintenance.js"></script>
 
 </body>
-
 </html>
