@@ -11,6 +11,9 @@ function calculateExactAge(dobString) {
     if (Number.isNaN(dob.getTime())) return -1;
 
     const today = new Date();
+    // Reject future dates
+    if (dob > today) return -1;
+
     let age = today.getFullYear() - dob.getFullYear();
     const monthDiff = today.getMonth() - dob.getMonth();
 
@@ -27,24 +30,33 @@ if (dobInput) {
     const maxDateStr = eighteenYearsAgo.toISOString().split("T")[0];
     dobInput.max = maxDateStr;
 
-    dobInput.addEventListener("change", function () {
-        const val = this.value;
-        if (!val) return;
+    function handleDobChange() {
+        const val = dobInput.value;
+        if (!val) {
+            message.innerHTML = "";
+            if (submitBtn) submitBtn.disabled = false;
+            return;
+        }
         const age = calculateExactAge(val);
         if (age < 18) {
             message.innerHTML = `
-                <div style="background: #fef2f2; border: 1px solid #fecaca; color: #991b1b; padding: 12px; border-radius: 8px; font-size: 0.9rem;">
-                    <strong>Age Restriction:</strong> You must be at least 18 years old to rent vehicles (Current calculated age: <strong>${age >= 0 ? age : 0} years</strong>).
+                <div style="background: #fef2f2; border: 1px solid #fecaca; color: #991b1b; padding: 12px; border-radius: 8px; font-size: 0.95rem; font-weight: 600;">
+                    ⚠️ You are not eligible to register. You must be 18 or older.
                 </div>
             `;
+            if (submitBtn) submitBtn.disabled = true;
         } else {
             message.innerHTML = `
-                <div style="background: #ecfdf5; border: 1px solid #a7f3d0; color: #065f46; padding: 8px 12px; border-radius: 6px; font-size: 0.85rem;">
+                <div style="background: #ecfdf5; border: 1px solid #a7f3d0; color: #065f46; padding: 10px 14px; border-radius: 6px; font-size: 0.9rem;">
                     ✓ Age verified: ${age} years old.
                 </div>
             `;
+            if (submitBtn) submitBtn.disabled = false;
         }
-    });
+    }
+
+    dobInput.addEventListener("change", handleDobChange);
+    dobInput.addEventListener("input", handleDobChange);
 }
 
 if (registerForm) {
@@ -80,10 +92,14 @@ if (registerForm) {
             return;
         }
 
-        // 4. Exact Age 18+ validation
+        // 4. Exact Age 18+ validation (reject under-18, future dates, and invalid dates)
         const exactAge = calculateExactAge(dob);
         if (exactAge < 18) {
-            showError(`Age Requirement Failed: You must be at least 18 years old to register and rent vehicles. Calculated age: ${exactAge >= 0 ? exactAge : 0} years.`);
+            showError("You are not eligible to register. You must be 18 or older.");
+            if (submitBtn) {
+                submitBtn.disabled = true;
+                submitBtn.textContent = "Create Account & Send Verification Email";
+            }
             return;
         }
 
@@ -124,6 +140,7 @@ if (registerForm) {
                 dob: dob,
                 age: exactAge,
                 role: "customer",
+                kyc_status: "Not Submitted",
                 emailVerified: false,
                 createdAt: firebase.firestore.FieldValue.serverTimestamp()
             });

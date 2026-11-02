@@ -11,14 +11,14 @@
 - **Active Working Branch:** `firebase-cloud-integration`
 - **Live Website URL:** `https://k3l-rentals-13ff0.web.app`
 - **Hosting Plan:** Firebase Spark Plan (Strict ₹0 / month — 100% Free Tier, No Blaze Upgrade, Zero Billing)
-- **Configured Receiving UPI ID:** `9486886986@ybl`
-- **Account Holder / Payee Name:** Ms Krishma Priya S (K3L Rentals)
-- **Active Admin Account:** `admin@k3lrentals.com` (Auth UID: `qXdPcqd4PVgL952U8vPr7UUidte2`)
-- **Mandatory Original Accounts to PRESERVE (Never Delete/Modify):**
+- **Payment Method:** Scan & Pay using UPI QR Code Only (`frontend/assets/payment-qr.png`)
+- **Preserved Sole Admin Account:** `24bcs142krishma@gmail.com` (Auth UID: `8lqQd9ADW0QFRwBFyQDbfrI4mJh2` • `/admins/{uid}`)
+- **Preserved Customer Accounts:**
   1. `krashvinsall@gmail.com`
   2. `24bcs142krishma@gmail.com`
-- **Verified Cloud Fleet:** Exactly 20 vehicles in `/vehicles`
+- **Verified Cloud Fleet:** Exactly 20 catalog vehicles in `/vehicles` (18 available, 2 maintenance)
 - **Verified Maintenance Logs:** Exactly 3 service logs in `/maintenance`
+- **Automated Verification:** 60 / 60 Tests Passed (35/35 Cloud E2E + 25/25 Defect Audit)
 
 ---
 

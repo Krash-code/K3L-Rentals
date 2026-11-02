@@ -122,9 +122,20 @@ async function runCleanup() {
 
     // 1g. Firebase Auth Accounts
     let authUsers = [];
-    if (fs.existsSync('auth_users.json')) {
-        const aData = JSON.parse(fs.readFileSync('auth_users.json', 'utf8'));
-        authUsers = aData.users || [];
+    const authQueryRes = await fetch(`${AUTH_BASE}/accounts:query`, {
+        method: 'POST',
+        headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+            targetProjectId: PROJECT_ID,
+            maxResults: 100
+        })
+    });
+    if (authQueryRes.status === 200) {
+        const authData = await authQueryRes.json();
+        authUsers = authData.userInfo || [];
     }
     const authUsersToDelete = authUsers.filter(u => u.localId !== PRESERVED_ADMIN_UID);
     console.log(`\n- Firebase Authentication: ${authUsers.length} total accounts`);
@@ -205,15 +216,38 @@ async function runCleanup() {
                 'Authorization': `Bearer ${token}`,
                 'Content-Type': 'application/json'
             },
-            body: JSON.stringify({ localIds: uidsToDelete })
+            body: JSON.stringify({
+                localIds: uidsToDelete,
+                force: true
+            })
         });
+        const batchData = await batchRes.json();
         console.log(`  ✓ Firebase Auth batchDelete executed for ${uidsToDelete.length} accounts: HTTP ${batchRes.status}`);
+        if (batchData.errors && batchData.errors.length > 0) {
+            console.warn("  ⚠️ Warning: batchDelete errors:", batchData.errors);
+        }
     }
 
     // -------------------------------------------------------------------------
     // 5. POST-CLEANUP VERIFICATION
     // -------------------------------------------------------------------------
     console.log("\n>>> [5/5] POST-CLEANUP INVENTORY VERIFICATION...\n");
+
+    const finalAuthRes = await fetch(`${AUTH_BASE}/accounts:query`, {
+        method: 'POST',
+        headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+            targetProjectId: PROJECT_ID,
+            maxResults: 100
+        })
+    });
+    const finalAuthData = await finalAuthRes.json();
+    const finalAuthUsers = finalAuthData.userInfo || [];
+    console.log(`- Final Firebase Auth accounts count: ${finalAuthUsers.length} (Expected: 1)`);
+    finalAuthUsers.forEach(u => console.log(`    Auth User: ${u.email} (UID: ${u.localId}, Verified: ${u.emailVerified})`));
 
     const finalAdmins = await getCollection("admins");
     console.log(`- Final /admins count: ${finalAdmins.length} (Expected: 1)`);
@@ -240,3 +274,4 @@ runCleanup().catch(err => {
     console.error("Cleanup error:", err);
     process.exit(1);
 });
+

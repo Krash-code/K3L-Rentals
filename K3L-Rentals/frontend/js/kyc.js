@@ -293,9 +293,22 @@ if (kycForm) {
 
 // Auth Listener
 if (auth) {
-    auth.onAuthStateChanged(function (user) {
+    auth.onAuthStateChanged(async function (user) {
         if (user) {
-            loadKycStatus();
+            try {
+                const uDoc = await db.collection("users").doc(user.uid).get();
+                if (!uDoc.exists) {
+                    alert("Customer profile not found. Please register your account before submitting KYC.");
+                    await auth.signOut();
+                    localStorage.removeItem("user");
+                    window.location.href = "register.html";
+                    return;
+                }
+                loadKycStatus();
+            } catch (err) {
+                console.error("KYC auth check error:", err);
+                loadKycStatus();
+            }
         } else {
             window.location.href = "login.html";
         }

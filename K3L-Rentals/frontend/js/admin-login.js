@@ -79,3 +79,19 @@ if (adminLoginForm) {
         }
     });
 }
+
+// Check if already authenticated as admin
+if (auth) {
+    auth.onAuthStateChanged(async function (user) {
+        if (user) {
+            try {
+                const adminDoc = await db.collection("admins").doc(user.uid).get();
+                if (adminDoc.exists) {
+                    window.location.href = "admin-dashboard.html";
+                }
+            } catch (e) {
+                console.warn("Existing admin session check note:", e);
+            }
+        }
+    });
+}

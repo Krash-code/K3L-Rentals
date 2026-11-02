@@ -810,6 +810,18 @@ function showBookingError(msg) {
 if (auth) {
     auth.onAuthStateChanged(async function (user) {
         if (user) {
+            try {
+                const uDoc = await db.collection("users").doc(user.uid).get();
+                if (!uDoc.exists) {
+                    alert("Customer profile not found. Please register an account before booking vehicles.");
+                    await auth.signOut();
+                    localStorage.removeItem("user");
+                    window.location.href = "register.html";
+                    return;
+                }
+            } catch (uErr) {
+                console.warn("Booking user verification note:", uErr);
+            }
             setupDocumentUploadListeners();
             await loadVehicle();
         } else {

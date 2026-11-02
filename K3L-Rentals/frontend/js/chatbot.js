@@ -337,7 +337,7 @@
                     <li><strong>Identity Verification (KYC):</strong> Submit your Driving Licence (DL) + Aadhaar or PAN on the <a href="kyc.html" style="color: #2563eb; font-weight: 600;">KYC Portal</a>.</li>
                     <li><strong>Admin Approval:</strong> Admin team inspects official documents. Once approved, vehicle booking unlocks.</li>
                     <li><strong>Select Dates &amp; Vehicle:</strong> Choose rental duration (1–7 days). Real-time conflict engine ensures availability.</li>
-                    <li><strong>25% Advance Payment:</strong> Pay the 25% deposit via direct UPI transfer to <code>9486886986@ybl</code> and submit your 12-digit UTR.</li>
+                    <li><strong>25% Advance Payment:</strong> Scan the official UPI QR code in My Bookings with your UPI app and submit your 12-digit transaction UTR.</li>
                     <li><strong>Admin Confirms Booking:</strong> Admin matches bank receipt and confirms the reservation.</li>
                     <li><strong>Pickup Inspection:</strong> 4-angle vehicle photos and starting odometer recorded at the hub.</li>
                     <li><strong>Active Trip &amp; GPS:</strong> Optional voluntary live GPS roadside assistance for emergency safety.</li>
@@ -347,18 +347,18 @@
             return;
         }
 
-        // 4. Advance Payment & UPI Protocol (Strictly UPI ID only - No QR)
-        if (lower.includes("advance") || lower.includes("payment") || lower.includes("pay") || lower.includes("upi") || lower.includes("deposit") || lower.includes("25%") || lower.includes("utr")) {
+        // 4. Advance Payment & UPI Protocol (Strictly Scan and Pay via UPI QR code only)
+        if (lower.includes("advance") || lower.includes("payment") || lower.includes("pay") || lower.includes("upi") || lower.includes("deposit") || lower.includes("25%") || lower.includes("utr") || lower.includes("qr")) {
             appendMessage("bot", `
-                💳 <strong>25% Advance Payment — Direct UPI ID Protocol:</strong>
-                <p style="margin-top: 4px;">K3L Rentals uses a single verified payment method: <strong>Direct UPI ID Transfer</strong>.</p>
+                💳 <strong>25% Advance Payment — Scan &amp; Pay QR Code:</strong>
+                <p style="margin-top: 4px;">K3L Rentals uses a single payment method: <strong>Scan and Pay using UPI QR Code</strong>.</p>
                 <ul style="margin-left: 18px; margin-top: 6px; font-size: 0.85rem; line-height: 1.5;">
-                    <li><strong>Verified Receiving UPI ID:</strong> <code>9486886986@ybl</code></li>
-                    <li><strong>Account Holder / Payee Name:</strong> Ms Krishma Priya S (K3L Rentals)</li>
+                    <li><strong>Payment Method:</strong> Scan the official UPI QR Code in <a href="my-bookings.html" style="color: #2563eb; font-weight: 600;">My Bookings</a>.</li>
                     <li><strong>Exact Advance Rate:</strong> Exactly 25% of the total rental price.</li>
-                    <li><strong>Instructions:</strong> Open any UPI app (GPay, PhonePe, Paytm, BHIM, CRED) → Send to UPI ID <code>9486886986@ybl</code> → Verify payee name → Pay advance amount.</li>
-                    <li><strong>Verification:</strong> Copy the 12-digit UPI reference number (UTR) from your receipt and submit it in My Bookings. Admin verifies receipt before confirmation.</li>
-                    <li><strong>Remaining Balance:</strong> 75% balance is due upon physical vehicle handover at the pickup hub.</li>
+                    <li><strong>Instructions:</strong> Open any UPI app (GPay, PhonePe, Paytm, BHIM) → Scan the official QR code displayed in your booking modal → Pay the exact advance amount.</li>
+                    <li><strong>Transaction Reference:</strong> Copy the 12-digit UPI reference number (UTR) from your receipt and submit it in My Bookings.</li>
+                    <li><strong>Admin Verification:</strong> Staff independently checks actual money receipt in the bank account before approving.</li>
+                    <li><strong>Remaining Balance:</strong> 75% remaining balance is settled upon vehicle pickup at the hub.</li>
                 </ul>
             `);
             return;

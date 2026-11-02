@@ -404,7 +404,7 @@ async function runTestSuite() {
     await fetch(`${AUTH_PROJECT_BASE}/accounts:batchDelete`, {
         method: "POST",
         headers: { 'Authorization': `Bearer ${adminToken}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ localIds: tempTestUids })
+        body: JSON.stringify({ localIds: tempTestUids, force: true })
     }).catch(() => {});
 
     if (passedTests === totalTests) {

@@ -204,7 +204,16 @@ async function loadVehicleDetails() {
     }
 }
 
-document.addEventListener("DOMContentLoaded", loadVehicleDetails);
-if (typeof firebase !== "undefined") {
+// Initial Load (Guarded to prevent duplicate invocation)
+let hasLoadedDetails = false;
+function safeLoadDetails() {
+    if (hasLoadedDetails) return;
+    hasLoadedDetails = true;
     loadVehicleDetails();
+}
+
+if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", safeLoadDetails);
+} else {
+    safeLoadDetails();
 }

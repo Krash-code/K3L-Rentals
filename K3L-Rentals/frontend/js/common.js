@@ -58,53 +58,85 @@ function updateNavbar() {
     const kycLink = document.getElementById("kycLink");
     const userGreeting = document.getElementById("userGreeting");
 
-    if (!auth) return;
-
-    auth.onAuthStateChanged(function (user) {
-        const loggedIn = !!user;
-
+    function renderNav(loggedIn, name = "") {
         if (loginLink) {
             loginLink.classList.toggle("hidden", loggedIn);
-            if (loggedIn) loginLink.style.display = "none";
-            else loginLink.style.display = "";
+            loginLink.style.display = loggedIn ? "none" : "";
         }
-
         if (registerLink) {
             registerLink.classList.toggle("hidden", loggedIn);
-            if (loggedIn) registerLink.style.display = "none";
-            else registerLink.style.display = "";
+            registerLink.style.display = loggedIn ? "none" : "";
         }
-
         if (bookingsLink) {
             bookingsLink.classList.toggle("hidden", !loggedIn);
-            if (!loggedIn) bookingsLink.style.display = "none";
-            else bookingsLink.style.display = "";
+            bookingsLink.style.display = !loggedIn ? "none" : "";
         }
-
         if (kycLink) {
             kycLink.classList.toggle("hidden", !loggedIn);
-            if (!loggedIn) kycLink.style.display = "none";
-            else kycLink.style.display = "";
+            kycLink.style.display = !loggedIn ? "none" : "";
         }
-
         if (logoutBtn) {
             logoutBtn.classList.toggle("hidden", !loggedIn);
-            if (!loggedIn) logoutBtn.style.display = "none";
-            else logoutBtn.style.display = "";
+            logoutBtn.style.display = !loggedIn ? "none" : "";
             logoutBtn.onclick = logout;
         }
-
         if (userGreeting) {
-            if (loggedIn) {
+            if (loggedIn && name) {
                 userGreeting.style.display = "";
-                userGreeting.textContent = user.displayName ? `Hi, ${user.displayName.split(" ")[0]}` : user.email.split("@")[0];
+                userGreeting.textContent = `Hi, ${name}`;
             } else {
                 userGreeting.style.display = "none";
+                userGreeting.textContent = "";
             }
         }
+    }
 
-        if (!loggedIn) {
+    if (!auth) return;
+
+    auth.onAuthStateChanged(async function (user) {
+        if (!user) {
             localStorage.removeItem("user");
+            renderNav(false);
+            return;
+        }
+
+        try {
+            // Verify Firestore profile existence to reject phantom/deleted sessions
+            const firestore = db || (typeof firebase !== "undefined" ? firebase.firestore() : null);
+            if (firestore) {
+                const [userDoc, adminDoc] = await Promise.all([
+                    firestore.collection("users").doc(user.uid).get().catch(() => ({ exists: false })),
+                    firestore.collection("admins").doc(user.uid).get().catch(() => ({ exists: false }))
+                ]);
+
+                if (!userDoc.exists && !adminDoc.exists) {
+                    console.warn("Invalid session: No customer or admin document found for UID:", user.uid);
+                    await auth.signOut();
+                    localStorage.removeItem("user");
+                    renderNav(false);
+                    return;
+                }
+
+                const profile = userDoc.exists ? userDoc.data() : adminDoc.data();
+                const isAdmin = adminDoc.exists || profile.role === "admin";
+                const displayName = (profile.name || user.displayName || user.email.split("@")[0]).split(" ")[0];
+
+                renderNav(true, displayName);
+
+                localStorage.setItem("user", JSON.stringify({
+                    uid: user.uid,
+                    name: profile.name || user.displayName || user.email.split("@")[0],
+                    email: user.email,
+                    role: isAdmin ? "admin" : "customer",
+                    emailVerified: user.emailVerified
+                }));
+            } else {
+                const displayName = (user.displayName || user.email.split("@")[0]).split(" ")[0];
+                renderNav(true, displayName);
+            }
+        } catch (err) {
+            console.warn("Navbar auth verification notice:", err);
+            renderNav(true, (user.displayName || user.email.split("@")[0]).split(" ")[0]);
         }
     });
 }

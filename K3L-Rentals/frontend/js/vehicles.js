@@ -290,8 +290,16 @@ document.getElementById("clearFiltersBtn")?.addEventListener("click", clearAllFi
 
 window.clearAllFilters = clearAllFilters;
 
-// Initial Load
-document.addEventListener("DOMContentLoaded", loadVehicles);
-if (typeof firebase !== "undefined") {
+// Initial Load (Guarded to prevent duplicate invocation)
+let hasLoadedVehicles = false;
+function safeLoadVehicles() {
+    if (hasLoadedVehicles) return;
+    hasLoadedVehicles = true;
     loadVehicles();
+}
+
+if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", safeLoadVehicles);
+} else {
+    safeLoadVehicles();
 }

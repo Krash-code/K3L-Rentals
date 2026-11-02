@@ -29,40 +29,62 @@ if (loginForm) {
         if (verificationBanner) verificationBanner.style.display = "none";
 
         try {
-            // Firebase Authentication login
+            // STEP 1: Firebase Authentication login
             const userCredential = await firebase.auth().signInWithEmailAndPassword(email, password);
             const user = userCredential.user;
 
-            // Fetch customer profile from Firestore
+            // STEP 2: Verify registered customer profile in Firestore
             const profileDoc = await firebase.firestore()
                 .collection("users")
                 .doc(user.uid)
                 .get();
 
-            let userData = {};
+            // Check if account is actually an administrator
             if (!profileDoc.exists) {
-                userData = {
-                    name: user.displayName || user.email.split("@")[0],
-                    email: user.email,
-                    phone: "",
-                    role: "customer",
-                    emailVerified: user.emailVerified
-                };
-                await firebase.firestore().collection("users").doc(user.uid).set({
-                    ...userData,
-                    createdAt: firebase.firestore.FieldValue.serverTimestamp()
-                });
-            } else {
-                userData = profileDoc.data();
-                // Sync emailVerified flag in Firestore if it became true
-                if (user.emailVerified && !userData.emailVerified) {
-                    await firebase.firestore().collection("users").doc(user.uid).update({
-                        emailVerified: true
-                    }).catch(console.warn);
+                const adminDoc = await firebase.firestore()
+                    .collection("admins")
+                    .doc(user.uid)
+                    .get();
+
+                if (adminDoc.exists) {
+                    await firebase.auth().signOut();
+                    localStorage.removeItem("user");
+                    showError("This is an administrator account. Please use the Admin Login Portal to access your dashboard.");
+                    setTimeout(() => {
+                        window.location.href = "admin-login.html";
+                    }, 1800);
+                    return;
                 }
+
+                // If neither customer profile nor admin record exists:
+                // NEVER automatically create an account during login!
+                await firebase.auth().signOut();
+                localStorage.removeItem("user");
+                showError("No customer profile found for this account. Your registration is incomplete or does not exist. Please register as a new customer.");
+                return;
             }
 
-            // Check if email is verified
+            const userData = profileDoc.data();
+
+            // Safety check: If a role is marked admin in customer doc, redirect to admin portal
+            if (userData.role === "admin") {
+                await firebase.auth().signOut();
+                localStorage.removeItem("user");
+                showError("Administrative accounts must sign in via the Admin Login Portal.");
+                setTimeout(() => {
+                    window.location.href = "admin-login.html";
+                }, 1800);
+                return;
+            }
+
+            // Sync emailVerified flag in Firestore if it became true in Firebase Auth
+            if (user.emailVerified && !userData.emailVerified) {
+                await firebase.firestore().collection("users").doc(user.uid).update({
+                    emailVerified: true
+                }).catch(console.warn);
+            }
+
+            // Inform user if email is unverified (email verification gate)
             if (!user.emailVerified) {
                 currentUnverifiedUser = user;
                 if (verificationBanner) {
@@ -70,12 +92,12 @@ if (loginForm) {
                 }
             }
 
-            // Save user session in localStorage
+            // Save verified user session in localStorage
             localStorage.setItem("user", JSON.stringify({
                 uid: user.uid,
                 name: userData.name || user.displayName || user.email.split("@")[0],
                 email: user.email,
-                role: userData.role || "customer",
+                role: "customer",
                 emailVerified: user.emailVerified
             }));
 
@@ -97,7 +119,9 @@ if (loginForm) {
                 error.code === "auth/wrong-password" ||
                 error.code === "auth/user-not-found"
             ) {
-                showError("Incorrect email or password. Please verify your credentials.");
+                showError("Invalid email or password. If you have not registered for an account yet, please click 'Register here' below.");
+            } else if (error.code === "auth/invalid-email") {
+                showError("Please enter a valid email address.");
             } else if (error.code === "auth/too-many-requests") {
                 showError("Too many unsuccessful attempts. Access temporarily restricted for security. Please try again shortly.");
             } else if (error.code === "auth/user-disabled") {
@@ -186,4 +210,24 @@ function escapeHTML(str) {
         '"': "&quot;",
         "'": "&#39;"
     })[c]);
+}
+
+// Clear stale phantom sessions or redirect valid active customers
+if (typeof firebase !== "undefined" && firebase.auth) {
+    firebase.auth().onAuthStateChanged(async function (user) {
+        if (user) {
+            try {
+                const profileDoc = await firebase.firestore().collection("users").doc(user.uid).get();
+                if (profileDoc.exists) {
+                    window.location.href = "vehicles.html";
+                } else {
+                    // Stale or deleted session
+                    await firebase.auth().signOut();
+                    localStorage.removeItem("user");
+                }
+            } catch (e) {
+                console.warn("Session check note:", e);
+            }
+        }
+    });
 }

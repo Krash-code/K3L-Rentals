@@ -163,43 +163,45 @@
             <button id="closePaymentModal" style="background: none; border: none; font-size: 1.5rem; cursor: pointer; color: var(--slate-400);">&times;</button>
         </div>
 
-        <div id="paymentModalSummary" style="background: var(--slate-50); border: 1px solid var(--slate-200); border-radius: 8px; padding: 14px; margin-bottom: 18px; font-size: 0.9rem;">
-        </div>
+        <!-- Scan & Pay using UPI QR Code (Single Payment Method) -->
+        <div style="background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 12px; padding: 20px; margin-bottom: 20px; text-align: center;">
+            <div style="display: flex; align-items: center; justify-content: center; gap: 8px; margin-bottom: 6px;">
+                <span style="font-size: 1.4rem;">📷</span>
+                <h3 style="font-size: 1.15rem; color: #0f172a; margin: 0; font-weight: 700;">Scan and Pay</h3>
+            </div>
+            <p style="font-size: 0.84rem; color: #64748b; margin: 0 0 16px;">
+                Scan the official QR code using any UPI app (GPay, PhonePe, Paytm, BHIM, CRED) to transfer your advance deposit.
+            </p>
 
-        <!-- Verified UPI ID Payment Block (Single Payment Method) -->
-        <div style="background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 10px; padding: 18px; margin-bottom: 20px;">
-            <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 12px;">
-                <span style="font-size: 1.5rem;">📱</span>
-                <div>
-                    <h4 style="font-size: 1rem; color: #0f172a; margin: 0; font-weight: 700;">Direct UPI ID Transfer</h4>
-                    <p style="font-size: 0.8rem; color: #64748b; margin: 2px 0 0;">Pay using any UPI app (GPay, PhonePe, Paytm, BHIM, CRED)</p>
-                </div>
+            <!-- Prominent QR Code Display with Click to Enlarge -->
+            <div style="display: inline-block; position: relative; background: white; padding: 12px; border-radius: 12px; border: 2px solid #e2e8f0; box-shadow: 0 4px 12px rgba(0,0,0,0.06); margin-bottom: 14px;">
+                <img
+                    id="paymentQrImage"
+                    src="assets/payment-qr.png"
+                    alt="Scan &amp; Pay UPI QR Code"
+                    style="width: 210px; height: 210px; object-fit: contain; display: block; cursor: pointer; border-radius: 6px;"
+                    title="Click to enlarge QR code">
+                <button
+                    type="button"
+                    id="enlargeQrBtn"
+                    style="margin-top: 10px; background: #eff6ff; border: 1px solid #bfdbfe; color: #1d4ed8; padding: 5px 14px; border-radius: 6px; font-size: 0.78rem; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 6px;">
+                    🔍 Click to Enlarge QR Code
+                </button>
             </div>
 
-            <div style="background: white; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px; margin-bottom: 14px;">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-                    <span style="font-size: 0.82rem; color: #64748b; font-weight: 600;">Verified Payee Name:</span>
-                    <strong style="color: #1e40af; font-size: 0.88rem;">Ms Krishma Priya S (K3L Rentals)</strong>
-                </div>
-                <div style="display: flex; justify-content: space-between; align-items: center;">
-                    <span style="font-size: 0.82rem; color: #64748b; font-weight: 600;">Receiving UPI ID:</span>
-                    <div style="display: flex; align-items: center; gap: 6px;">
-                        <code id="upiIdText" style="background: #e0f2fe; color: #0369a1; padding: 4px 8px; border-radius: 4px; font-weight: 700; font-size: 0.92rem;">9486886986@ybl</code>
-                        <button type="button" id="copyUpiBtn" style="padding: 4px 10px; font-size: 0.78rem; font-weight: 600; border-radius: 4px; border: 1px solid #0284c7; background: #0284c7; color: white; cursor: pointer;">
-                            Copy
-                        </button>
-                    </div>
-                </div>
+            <!-- Financial Breakdown (Total, 25% Advance, 75% Balance) -->
+            <div id="paymentModalSummary" style="background: white; border: 1px solid #e2e8f0; border-radius: 8px; padding: 14px; margin-bottom: 14px; text-align: left; font-size: 0.9rem;">
             </div>
 
-            <div style="background: #eff6ff; border-left: 3px solid #2563eb; padding: 10px 12px; border-radius: 4px; font-size: 0.82rem; color: #1e40af; line-height: 1.45;">
-                <strong>Payment Instructions:</strong>
+            <!-- Short Payment Instructions -->
+            <div style="background: #eff6ff; border-left: 3px solid #2563eb; padding: 12px 14px; border-radius: 6px; font-size: 0.82rem; color: #1e40af; text-align: left; line-height: 1.5;">
+                <strong style="color: #1e3a8a;">Payment Instructions:</strong>
                 <ol style="margin: 6px 0 0 16px; padding: 0;">
-                    <li>Open your preferred UPI app (GPay / PhonePe / Paytm / BHIM).</li>
-                    <li>Select <strong>Pay to UPI ID</strong> and enter <code>9486886986@ybl</code>.</li>
-                    <li>Verify payee name displays as <strong>Ms Krishma Priya S</strong>.</li>
-                    <li>Transfer the exact 25% advance amount indicated above.</li>
-                    <li>Copy the 12-digit UPI Transaction / UTR reference number from the payment receipt and paste below.</li>
+                    <li>Open your preferred UPI application on your smartphone (GPay, PhonePe, Paytm, BHIM).</li>
+                    <li>Scan the official QR code displayed above.</li>
+                    <li>Transfer the exact 25% advance amount shown in the summary.</li>
+                    <li>Locate the 12-digit UPI Transaction ID / UTR reference number on your payment confirmation screen.</li>
+                    <li>Enter the reference number below and submit for staff verification.</li>
                 </ol>
             </div>
         </div>
@@ -309,6 +311,25 @@
                 Close
             </button>
         </div>
+    </div>
+</div>
+
+<!-- Modal: Enlarge QR Code for Scanning -->
+<div id="qrEnlargeModal" class="modal-overlay" style="display: none; align-items: center; justify-content: center; z-index: 1100;">
+    <div class="modal-content-card" style="max-width: 440px; text-align: center; padding: 24px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--slate-200); padding-bottom: 10px; margin-bottom: 16px;">
+            <h3 style="margin: 0; font-size: 1.15rem; color: var(--slate-900);">Scan &amp; Pay QR Code</h3>
+            <button id="closeEnlargeQrModal" style="background: none; border: none; font-size: 1.5rem; cursor: pointer; color: var(--slate-400);">&times;</button>
+        </div>
+        <div style="background: white; padding: 14px; border-radius: 12px; border: 2px solid #e2e8f0; display: inline-block; box-shadow: 0 4px 14px rgba(0,0,0,0.08);">
+            <img id="enlargedQrImage" src="assets/payment-qr.png" alt="Enlarged Payment QR" style="width: 320px; height: 320px; object-fit: contain; max-width: 100%; border-radius: 6px;">
+        </div>
+        <p style="margin-top: 14px; font-size: 0.85rem; color: var(--slate-600); line-height: 1.4;">
+            Point your UPI mobile app (GPay, PhonePe, Paytm, BHIM) camera directly at this QR code to initiate payment.
+        </p>
+        <button id="dismissEnlargeQrBtn" class="secondary-btn" style="margin-top: 10px; padding: 8px 20px;">
+            Close
+        </button>
     </div>
 </div>
 

@@ -17,7 +17,6 @@ const paymentModal = document.getElementById("paymentModal");
 const closePaymentModal = document.getElementById("closePaymentModal");
 const paymentSubmissionForm = document.getElementById("paymentSubmissionForm");
 const paymentFormMessage = document.getElementById("paymentFormMessage");
-const copyUpiBtn = document.getElementById("copyUpiBtn");
 
 const resubmitModal = document.getElementById("resubmitModal");
 const closeResubmitModal = document.getElementById("closeResubmitModal");
@@ -450,12 +449,13 @@ function renderBookingCard(b) {
     `;
 }
 
-// Open 25% Advance Payment Modal (Single Payment Method: Direct UPI ID)
+// Open 25% Advance Payment Modal (Single Payment Method: Scan & Pay UPI QR Code)
 function openPaymentModal(booking) {
     activePayBooking = booking;
     const summary = document.getElementById("paymentModalSummary");
     const bookingIdInput = document.getElementById("payModalBookingId");
     const utrInput = document.getElementById("utrNumberInput");
+    const qrImg = document.getElementById("paymentQrImage");
 
     bookingIdInput.value = booking.id;
     utrInput.value = "";
@@ -463,21 +463,37 @@ function openPaymentModal(booking) {
 
     const total = Number(booking.total_amount || 0);
     const advance = Number(booking.advance_amount || Math.round(total * 0.25));
+    const balance = Number(booking.balance_amount || (total - advance));
 
     summary.innerHTML = `
         <div style="display: flex; justify-content: space-between; margin-bottom: 6px;">
-            <span>Vehicle:</span>
-            <strong>${escapeHTML(booking.model)} (${escapeHTML(booking.vehicle_number)})</strong>
+            <span style="color: var(--slate-600);">Vehicle Reserved:</span>
+            <strong>${escapeHTML(booking.model)} (<code>${escapeHTML(booking.vehicle_number || 'N/A')}</code>)</strong>
         </div>
         <div style="display: flex; justify-content: space-between; margin-bottom: 6px;">
-            <span>Total Rental Amount:</span>
+            <span style="color: var(--slate-600);">Rental Duration:</span>
+            <span>${escapeHTML(booking.start_date)} → ${escapeHTML(booking.end_date)} (${escapeHTML(booking.rental_days || 1)} Days)</span>
+        </div>
+        <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+            <span style="color: var(--slate-600);">Total Rental Amount:</span>
             <span>₹${total.toLocaleString("en-IN")}</span>
         </div>
-        <div style="display: flex; justify-content: space-between; font-size: 1.05rem; color: #2563eb; padding-top: 6px; border-top: 1px dashed #cbd5e1;">
-            <strong>25% Advance Payable Now:</strong>
-            <strong>₹${advance.toLocaleString("en-IN")}</strong>
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; padding: 10px 12px; background: #eff6ff; border-radius: 6px; border: 1px solid #bfdbfe;">
+            <span style="color: #1e40af; font-weight: 700;">Mandatory 25% Advance (Payable Now):</span>
+            <strong style="font-size: 1.15rem; color: #1d4ed8;">₹${advance.toLocaleString("en-IN")}</strong>
+        </div>
+        <div style="display: flex; justify-content: space-between; font-size: 0.85rem; color: var(--slate-600); margin-top: 6px;">
+            <span>Remaining 75% Balance Due at Pickup:</span>
+            <strong style="color: var(--slate-800);">₹${balance.toLocaleString("en-IN")}</strong>
         </div>
     `;
+
+    if (qrImg) {
+        qrImg.src = "assets/payment-qr.png";
+        qrImg.onerror = function () {
+            this.src = "assets/payment-qr.svg";
+        };
+    }
 
     paymentModal.style.display = "flex";
 }
@@ -489,13 +505,30 @@ if (closePaymentModal) {
     });
 }
 
-// Copy UPI ID button
-if (copyUpiBtn) {
-    copyUpiBtn.addEventListener("click", () => {
-        navigator.clipboard.writeText("9486886986@ybl").then(() => {
-            copyUpiBtn.textContent = "Copied!";
-            setTimeout(() => { copyUpiBtn.textContent = "Copy"; }, 2000);
-        });
+// Enlarge QR Modal handlers
+function openEnlargeQr() {
+    const qrModal = document.getElementById("qrEnlargeModal");
+    const enlargedImg = document.getElementById("enlargedQrImage");
+    const qrImg = document.getElementById("paymentQrImage");
+    if (qrModal && enlargedImg) {
+        enlargedImg.src = qrImg ? qrImg.src : "assets/payment-qr.png";
+        qrModal.style.display = "flex";
+    }
+}
+
+document.getElementById("paymentQrImage")?.addEventListener("click", openEnlargeQr);
+document.getElementById("enlargeQrBtn")?.addEventListener("click", openEnlargeQr);
+
+const closeEnlargeQrModal = document.getElementById("closeEnlargeQrModal");
+const dismissEnlargeQrBtn = document.getElementById("dismissEnlargeQrBtn");
+if (closeEnlargeQrModal) {
+    closeEnlargeQrModal.addEventListener("click", () => {
+        document.getElementById("qrEnlargeModal").style.display = "none";
+    });
+}
+if (dismissEnlargeQrBtn) {
+    dismissEnlargeQrBtn.addEventListener("click", () => {
+        document.getElementById("qrEnlargeModal").style.display = "none";
     });
 }
 
@@ -505,9 +538,10 @@ if (paymentSubmissionForm) {
         e.preventDefault();
         if (!activePayBooking) return;
 
-        const utr = document.getElementById("utrNumberInput").value.trim();
-        if (!utr || utr.length < 6) {
-            paymentFormMessage.innerHTML = `<span style="color:red;">Please enter a valid 12-digit UPI reference number.</span>`;
+        const utrRaw = document.getElementById("utrNumberInput").value.trim();
+        const utr = utrRaw.replace(/\s+/g, "");
+        if (!/^\d{12}$/.test(utr) && !/^[A-Za-z0-9]{8,18}$/.test(utr)) {
+            paymentFormMessage.innerHTML = `<span style="color:red;">Please enter a valid 12-digit UPI UTR / Transaction Reference number.</span>`;
             return;
         }
 
@@ -519,7 +553,7 @@ if (paymentSubmissionForm) {
             await db.collection("bookings").doc(activePayBooking.id).update({
                 payment_status: "Pending Verification",
                 utr_number: utr,
-                payment_method: "UPI",
+                payment_method: "UPI QR",
                 payment_submitted_at: firebase.firestore.FieldValue.serverTimestamp(),
                 updatedAt: firebase.firestore.FieldValue.serverTimestamp()
             });
@@ -529,7 +563,7 @@ if (paymentSubmissionForm) {
             setTimeout(async () => {
                 paymentModal.style.display = "none";
                 activePayBooking = null;
-                showNotice("✓ Advance payment reference submitted. Our team is verifying your payment.", "success");
+                showNotice("✓ Advance payment reference submitted. Our team is verifying your QR payment.", "success");
                 await loadMyBookings();
             }, 800);
 
@@ -719,7 +753,11 @@ async function stopCustomerTracking(b) {
 
     try {
         await db.collection("bookings").doc(b.id).update({
-            "tracking.is_sharing": false,
+            tracking: {
+                ...(b.tracking || {}),
+                is_sharing: false,
+                last_updated: firebase.firestore.FieldValue.serverTimestamp()
+            },
             updatedAt: firebase.firestore.FieldValue.serverTimestamp()
         });
 
@@ -978,8 +1016,20 @@ document.querySelectorAll(".filter-tab-btn").forEach(btn => {
 
 // Auth state listener
 if (auth) {
-    auth.onAuthStateChanged(function (user) {
+    auth.onAuthStateChanged(async function (user) {
         if (user) {
+            try {
+                const uDoc = await db.collection("users").doc(user.uid).get();
+                if (!uDoc.exists) {
+                    alert("Customer profile not found. Please register an account first.");
+                    await auth.signOut();
+                    localStorage.removeItem("user");
+                    window.location.href = "register.html";
+                    return;
+                }
+            } catch (err) {
+                console.warn("My Bookings profile check error:", err);
+            }
             loadMyBookings();
         } else {
             window.location.href = "login.html";
