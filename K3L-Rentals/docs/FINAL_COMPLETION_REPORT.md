@@ -169,3 +169,4 @@ To activate live customer QR payments:
    firebase deploy --only hosting --project k3l-rentals-13ff0
    ```
 4. Verify by opening [https://k3l-rentals-13ff0.web.app/my-bookings.html](https://k3l-rentals-13ff0.web.app/my-bookings.html) and clicking on any booking awaiting advance payment.
+
