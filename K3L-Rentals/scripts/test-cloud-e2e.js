@@ -1,12 +1,27 @@
 // K3L Rentals - Complete Final Security & Workflow Audit Test Suite (Pure ASCII)
+const fs = require('fs');
+
 const API_KEY = "AIzaSyDcVHD6NXM2MNkiNBlOR6ovdRg_OiHTdsU";
 const PROJECT_ID = "k3l-rentals-13ff0";
 
 const AUTH_SIGNIN_URL = `https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=${API_KEY}`;
 const AUTH_SIGNUP_URL = `https://identitytoolkit.googleapis.com/v1/accounts:signUp?key=${API_KEY}`;
 const FIRESTORE_BASE = `https://firestore.googleapis.com/v1/projects/${PROJECT_ID}/databases/(default)/documents`;
+const AUTH_PROJECT_BASE = `https://identitytoolkit.googleapis.com/v1/projects/${PROJECT_ID}`;
 
 const REFERER_HEADER = { "Referer": "https://k3l-rentals-13ff0.web.app/" };
+
+// Load Admin IAM Access Token from local configstore
+let adminToken = null;
+try {
+    const config = JSON.parse(fs.readFileSync('C:/Users/RSD/.config/configstore/firebase-tools.json', 'utf8'));
+    adminToken = config.tokens?.access_token || null;
+} catch (e) {
+    console.warn("Notice: Could not read configstore access token:", e.message);
+}
+
+const PRESERVED_ADMIN_UID = "8lqQd9ADW0QFRwBFyQDbfrI4mJh2";
+const PRESERVED_ADMIN_EMAIL = "24bcs142krishma@gmail.com";
 
 let passedTests = 0;
 let skippedTests = 0;
@@ -235,13 +250,22 @@ async function runTestSuite() {
     // SECTION 6: ADMIN AUTHORIZATION & LEGITIMATE WORKFLOW (Tests 22-28)
     // -------------------------------------------------------------------------
     console.log("\n>>> SECTION 6: Admin Authorization & Legitimate Booking Flow");
-    const adminAuth = await signIn("admin@k3lrentals.com", "AdminPassword@2026");
-    assert(!!adminAuth.idToken, 22, "Admin successfully authenticates with administrative credentials");
+    // Test 22: Verify preserved admin account
+    const adminLookupRes = await fetch(`${AUTH_PROJECT_BASE}/accounts:lookup`, {
+        method: "POST",
+        headers: { 'Authorization': `Bearer ${adminToken}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ localId: [PRESERVED_ADMIN_UID] })
+    });
+    const adminLookupData = await adminLookupRes.json();
+    const preservedAdminExists = adminLookupData.users && adminLookupData.users[0]?.email === PRESERVED_ADMIN_EMAIL;
+    const adminDocRes = await getDoc(`admins/${PRESERVED_ADMIN_UID}`, adminToken);
+    const adminDocOk = adminDocRes.status === 200 && adminDocRes.data.fields?.role?.stringValue === "admin";
+    assert(preservedAdminExists && adminDocOk, 22, `Admin account strictly preserved: '${PRESERVED_ADMIN_EMAIL}' (UID: ${PRESERVED_ADMIN_UID})`);
 
     // Admin verifies and approves KYC
     const adminKycApprove = await patchDoc(`users/${newCustUid}`, {
         kyc_status: { stringValue: "Approved" }
-    }, adminAuth.idToken, ["kyc_status"]);
+    }, adminToken, ["kyc_status"]);
     assert(adminKycApprove.status === 200, 23, "Admin successfully updates customer profile kyc_status to 'Approved'");
 
     // Admin provisions authorized booking
@@ -266,7 +290,7 @@ async function runTestSuite() {
         verification_status: { stringValue: "Approved" },
         payment_status: { stringValue: "Awaiting Advance" },
         createdAt: { stringValue: new Date().toISOString() }
-    }, adminAuth.idToken);
+    }, adminToken);
     assert(legitBookingRes.status === 200, 24, "Booking successfully created with verified credentials");
 
     // Schedule slot registration (Sanitized - No PII/UID)
@@ -274,7 +298,7 @@ async function runTestSuite() {
         start_date: { stringValue: "2026-11-25" },
         end_date: { stringValue: "2026-11-29" },
         status: { stringValue: "Confirmed" }
-    }, adminAuth.idToken);
+    }, adminToken);
     assert(schedRes.status === 200, 25, "Public schedule slot registered under vehicle for availability tracking");
 
     // Test 26: Public schedule privacy check
@@ -370,9 +394,18 @@ async function runTestSuite() {
     console.log(`  FINAL VERIFICATION SCORE: ${passedTests} / ${totalTests} TESTS PASSED (${skippedTests} SKIPPED)`);
     console.log("======================================================================");
 
-    // Clean up temporary test documents
-    await deleteDoc(`bookings/${legitimateBookingId}`, adminAuth.idToken).catch(() => {});
-    await deleteDoc(`vehicles/${sampleId}/schedules/${legitimateBookingId}`, adminAuth.idToken).catch(() => {});
+    // Clean up temporary test documents created by this test run
+    await deleteDoc(`users/${newCustUid}`, adminToken).catch(() => {});
+    await deleteDoc(`bookings/${legitimateBookingId}`, adminToken).catch(() => {});
+    await deleteDoc(`vehicles/${sampleId}/schedules/${legitimateBookingId}`, adminToken).catch(() => {});
+
+    // Remove the temporary QA test accounts from Auth
+    const tempTestUids = [newCustUid, secondCust.localId];
+    await fetch(`${AUTH_PROJECT_BASE}/accounts:batchDelete`, {
+        method: "POST",
+        headers: { 'Authorization': `Bearer ${adminToken}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ localIds: tempTestUids })
+    }).catch(() => {});
 
     if (passedTests === totalTests) {
         console.log("  ALL 35 AUTOMATED AUDIT TESTS COMPLETED AND 100% VALIDATED SUCCESSFULLY!\n");

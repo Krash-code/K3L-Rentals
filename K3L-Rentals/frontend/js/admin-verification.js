@@ -651,13 +651,26 @@ async function confirmAdvancePayment(booking) {
                 }, { merge: true });
         }
 
-        // 3. Notify customer
+        // 3. Notify customer (Structured In-App Booking Confirmation)
         if (booking.userId) {
+            const total = Number(booking.total_amount || 0);
+            const advance = Number(booking.advance_amount || Math.round(total * 0.25));
+            const balance = Number(booking.balance_amount || (total - advance));
             await db.collection("users").doc(booking.userId).collection("notifications").add({
                 title: "Reservation Confirmed!",
-                message: `Your 25% advance payment for ${booking.model} has been verified. Your booking is confirmed! Remaining 75% balance is due at vehicle pickup.`,
+                message: `Your booking for ${booking.model} (${booking.vehicle_number || ''}) from ${booking.start_date} to ${booking.end_date} has been confirmed! Total: ₹${total.toLocaleString('en-IN')}, 25% Advance Paid: ₹${advance.toLocaleString('en-IN')}, 75% Balance Due at Pickup: ₹${balance.toLocaleString('en-IN')}. Pickup at: 📍 ${booking.location || 'Coimbatore'} hub with your original Driving Licence.`,
                 type: "payment_confirmed",
                 bookingId: booking.id,
+                vehicleModel: booking.model || "",
+                vehicleNumber: booking.vehicle_number || "",
+                startDate: booking.start_date || "",
+                endDate: booking.end_date || "",
+                totalAmount: total,
+                advanceAmount: advance,
+                balanceAmount: balance,
+                paymentStatus: "Paid",
+                bookingStatus: "Confirmed",
+                pickupInstructions: `Please present your original Driving Licence and Aadhaar/PAN card at the ${booking.location || 'Coimbatore'} pickup hub. Starting odometer and 4-angle vehicle condition will be recorded before keys handover.`,
                 read: false,
                 createdAt: firebase.firestore.FieldValue.serverTimestamp()
             }).catch(console.warn);

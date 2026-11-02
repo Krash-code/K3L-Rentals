@@ -1,6 +1,7 @@
 // K3L Rentals - Rule-Based Vehicle & Travel Recommendation Assistant
 (function () {
     const db = window.db || (typeof firebase !== "undefined" ? firebase.firestore() : null);
+    const auth = window.auth || (typeof firebase !== "undefined" ? firebase.auth() : null);
 
     let chatFleet = [];
     let isFleetLoaded = false;
@@ -29,7 +30,7 @@
             </button>
 
             <!-- Chatbot Window -->
-            <div id="chatbotWindow" style="display: none; position: fixed; bottom: 90px; right: 24px; width: 380px; max-width: calc(100vw - 32px); height: 520px; max-height: calc(100vh - 120px); background: white; border-radius: 16px; box-shadow: 0 12px 35px rgba(15,23,42,0.2); border: 1px solid #e2e8f0; z-index: 1000; flex-direction: column; overflow: hidden; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
+            <div id="chatbotWindow" style="display: none; position: fixed; bottom: 90px; right: 24px; width: 380px; max-width: calc(100vw - 32px); height: 530px; max-height: calc(100vh - 120px); background: white; border-radius: 16px; box-shadow: 0 12px 35px rgba(15,23,42,0.2); border: 1px solid #e2e8f0; z-index: 1000; flex-direction: column; overflow: hidden; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
                 
                 <!-- Chat Header -->
                 <div style="background: #0f172a; color: white; padding: 14px 18px; display: flex; justify-content: space-between; align-items: center;">
@@ -46,25 +47,27 @@
                 <!-- Chat Messages Body -->
                 <div id="chatbotMessages" style="flex: 1; padding: 16px; overflow-y: auto; background: #f8fafc; display: flex; flex-direction: column; gap: 12px;">
                     <!-- Initial Welcome Message -->
-                    <div class="chat-msg bot-msg" style="align-self: flex-start; max-width: 88%; background: white; border: 1px solid #e2e8f0; border-radius: 12px; padding: 12px 14px; box-shadow: 0 1px 2px rgba(0,0,0,0.05); font-size: 0.88rem; line-height: 1.45; color: #1e293b;">
+                    <div class="chat-msg bot-msg" style="align-self: flex-start; max-width: 90%; background: white; border: 1px solid #e2e8f0; border-radius: 12px; padding: 12px 14px; box-shadow: 0 1px 2px rgba(0,0,0,0.05); font-size: 0.88rem; line-height: 1.45; color: #1e293b;">
                         👋 Hello! I am your <strong>K3L Rule-Based Vehicle Recommendation Assistant</strong>.
-                        <p style="margin-top: 6px;">Looking for vehicle suggestions for an Ooty road trip, weekend bike ride, KYC verification, or rental policies? Pick a quick option below or ask me anything!</p>
+                        <p style="margin-top: 6px;">I can recommend available fleet cars or bikes for your trip, explain our Age 18+ KYC verification, 25% advance UPI payment, or rental inspection policies. Pick a topic or ask below!</p>
                     </div>
 
                     <!-- Quick Suggestion Chips -->
                     <div id="chatbotChips" style="display: flex; flex-wrap: wrap; gap: 6px; margin-top: 4px;">
-                        <button class="chat-chip" data-query="quiz">🎯 Match My Ride (Quiz)</button>
-                        <button class="chat-chip" data-query="Best car for Ooty / Kodaikanal hill trip">⛰️ Ooty Hill Trip</button>
-                        <button class="chat-chip" data-query="Suggest bikes for road trip">🏍️ Weekend Bike Ride</button>
-                        <button class="chat-chip" data-query="Budget commuter car for city">💰 Budget City Car</button>
-                        <button class="chat-chip" data-query="What documents and age are required?">📋 Rental Rules</button>
-                        <button class="chat-chip" data-query="How does the 25% advance payment work?">💳 Advance Payment</button>
+                        <button class="chat-chip" data-query="quiz">🎯 Match My Ride</button>
+                        <button class="chat-chip" data-query="Best car for Ooty hill trip">⛰️ Ooty Hill Trip</button>
+                        <button class="chat-chip" data-query="Suggest bikes for road trip">🏍️ Weekend Bikes</button>
+                        <button class="chat-chip" data-query="Budget commuter car for city">💰 Budget Cars</button>
+                        <button class="chat-chip" data-query="How does the KYC and booking process work?">📋 Booking Workflow</button>
+                        <button class="chat-chip" data-query="How does the 25% advance payment work?">💳 25% Advance UPI</button>
+                        <button class="chat-chip" data-query="How does vehicle pickup and return inspection work?">📸 4-Angle Inspections</button>
+                        <button class="chat-chip" data-query="How does live GPS tracking work?">📍 Live GPS Roadside Safety</button>
                     </div>
                 </div>
 
                 <!-- Chat Input Form -->
                 <form id="chatbotInputForm" style="display: flex; gap: 8px; padding: 12px; background: white; border-top: 1px solid #e2e8f0;">
-                    <input type="text" id="chatbotInputText" placeholder="Ask about trips, cars, bikes, rules..." style="flex: 1; padding: 10px 14px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 0.88rem; outline: none;">
+                    <input type="text" id="chatbotInputText" placeholder="Ask about cars, bikes, KYC, UPI, trips..." style="flex: 1; padding: 10px 14px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 0.88rem; outline: none;">
                     <button type="submit" style="background: #2563eb; color: white; border: none; border-radius: 8px; padding: 0 16px; font-weight: 600; cursor: pointer; font-size: 0.9rem;">
                         Send
                     </button>
@@ -204,7 +207,7 @@
             matches = chatFleet.filter(v => {
                 const m = String(v.model || "").toLowerCase();
                 const t = String(v.type || "").toLowerCase();
-                return t.includes("suv") || m.includes("innova") || m.includes("scorpio") || m.includes("thar") || m.includes("creta");
+                return t.includes("suv") || m.includes("innova") || m.includes("scorpio") || m.includes("thar") || m.includes("creta") || m.includes("fortuner") || m.includes("xuv700");
             });
             if (matches.length === 0) {
                 matches = chatFleet.filter(v => v.category === "car");
@@ -213,7 +216,7 @@
             matches = chatFleet.filter(v => v.category === "car");
         }
 
-        const top = matches.slice(0, 3);
+        const top = matches.filter(v => v.status !== "maintenance").slice(0, 3);
         let reply = `🎉 <strong>Matched Fleet Vehicles for Your Trip:</strong><br>`;
         if (top.length > 0) {
             reply += `<div style="display: flex; flex-direction: column; gap: 8px; margin-top: 8px;">`;
@@ -263,10 +266,10 @@
                 const cat = String(v.category || "").toLowerCase();
                 const type = String(v.type || "").toLowerCase();
                 const model = String(v.model || "").toLowerCase();
-                return cat === "car" && (type.includes("suv") || model.includes("thar") || model.includes("scorpio") || model.includes("innova") || model.includes("creta") || model.includes("brezza"));
+                return cat === "car" && (type.includes("suv") || model.includes("thar") || model.includes("fortuner") || model.includes("xuv700") || model.includes("innova") || model.includes("creta") || model.includes("seltos"));
             });
 
-            const topMatches = suvs.slice(0, 3);
+            const topMatches = suvs.filter(v => v.status !== "maintenance").slice(0, 3);
             let reply = `⛰️ <strong>Hill Station &amp; Ghat Recommendations:</strong><br>For driving up to Ooty, Coonoor, or Kodaikanal, high ground clearance and reliable hill-climb torque are essential.`;
 
             if (topMatches.length > 0) {
@@ -295,7 +298,7 @@
 
         // 2. Bikes / Motorcycle road trip
         if (lower.includes("bike") || lower.includes("bullet") || lower.includes("enfield") || lower.includes("ride") || lower.includes("motorcycle")) {
-            const bikes = chatFleet.filter(v => String(v.category || "").toLowerCase() === "bike");
+            const bikes = chatFleet.filter(v => String(v.category || "").toLowerCase() === "bike" && v.status !== "maintenance");
             const topBikes = bikes.slice(0, 3);
 
             let reply = `🏍️ <strong>Bikes for Road Trips &amp; Commuting:</strong><br>Bikes offer great fuel efficiency and scenic immersion across the Coimbatore → Erode → Salem corridor.`;
@@ -324,49 +327,121 @@
             return;
         }
 
-        // 3. Rental Rules & Age & KYC
-        if (lower.includes("rule") || lower.includes("age") || lower.includes("document") || lower.includes("licence") || lower.includes("license") || lower.includes("aadhaar") || lower.includes("pan") || lower.includes("kyc")) {
+        // 3. Rental Rules & Age & KYC & Booking Workflow
+        if (lower.includes("rule") || lower.includes("age") || lower.includes("document") || lower.includes("licence") || lower.includes("license") || lower.includes("aadhaar") || lower.includes("pan") || lower.includes("kyc") || lower.includes("workflow") || lower.includes("how to book") || lower.includes("process")) {
             appendMessage("bot", `
-                📋 <strong>K3L Rentals Policies &amp; KYC Verification:</strong>
-                <ul style="margin-left: 18px; margin-top: 6px; font-size: 0.85rem; line-height: 1.5;">
-                    <li><strong>Minimum Age:</strong> Exactly 18 years old or older.</li>
-                    <li><strong>Required Driver Documents:</strong> Valid Driving Licence (DL) + Aadhaar Card OR PAN Card.</li>
-                    <li><strong>ID Verification (KYC):</strong> One-time admin review via the <a href="kyc.html" style="color: #2563eb; font-weight: 600;">KYC Portal</a> unlocks vehicle and date reservations.</li>
-                    <li><strong>Rental Duration:</strong> 1 to 7 consecutive days maximum per booking.</li>
-                    <li><strong>4-Angle Inspection:</strong> Front, Back, Left, Right photos + odometer recorded at vehicle pickup and return.</li>
-                </ul>
+                📋 <strong>Complete K3L Rental &amp; Booking Lifecycle:</strong>
+                <ol style="margin-left: 18px; margin-top: 6px; font-size: 0.85rem; line-height: 1.5;">
+                    <li><strong>Registration (Age 18+):</strong> Register with your official DOB and Indian mobile number.</li>
+                    <li><strong>Email Verification:</strong> Verify your email address via the link sent to your inbox.</li>
+                    <li><strong>Identity Verification (KYC):</strong> Submit your Driving Licence (DL) + Aadhaar or PAN on the <a href="kyc.html" style="color: #2563eb; font-weight: 600;">KYC Portal</a>.</li>
+                    <li><strong>Admin Approval:</strong> Admin team inspects official documents. Once approved, vehicle booking unlocks.</li>
+                    <li><strong>Select Dates &amp; Vehicle:</strong> Choose rental duration (1–7 days). Real-time conflict engine ensures availability.</li>
+                    <li><strong>25% Advance Payment:</strong> Pay the 25% deposit via direct UPI transfer to <code>9486886986@ybl</code> and submit your 12-digit UTR.</li>
+                    <li><strong>Admin Confirms Booking:</strong> Admin matches bank receipt and confirms the reservation.</li>
+                    <li><strong>Pickup Inspection:</strong> 4-angle vehicle photos and starting odometer recorded at the hub.</li>
+                    <li><strong>Active Trip &amp; GPS:</strong> Optional voluntary live GPS roadside assistance for emergency safety.</li>
+                    <li><strong>Return &amp; Settlement:</strong> Return inspection, penalty review (if any), and printable 5-point receipt.</li>
+                </ol>
             `);
             return;
         }
 
-        // 4. Advance Payment & UPI
+        // 4. Advance Payment & UPI Protocol (Strictly UPI ID only - No QR)
         if (lower.includes("advance") || lower.includes("payment") || lower.includes("pay") || lower.includes("upi") || lower.includes("deposit") || lower.includes("25%") || lower.includes("utr")) {
             appendMessage("bot", `
-                💳 <strong>25% Advance Payment &amp; UPI Protocol:</strong>
-                <p style="margin-top: 4px;">To guarantee fleet allocation, K3L Rentals collects <strong>exactly 25% of the total rental amount</strong> as an advance deposit upon KYC document approval.</p>
+                💳 <strong>25% Advance Payment — Direct UPI ID Protocol:</strong>
+                <p style="margin-top: 4px;">K3L Rentals uses a single verified payment method: <strong>Direct UPI ID Transfer</strong>.</p>
                 <ul style="margin-left: 18px; margin-top: 6px; font-size: 0.85rem; line-height: 1.5;">
-                    <li><strong>Receiving UPI ID:</strong> <code>9486886986@ybl</code></li>
-                    <li><strong>Account Holder / Payee:</strong> Ms Krishma Priya S (K3L Rentals)</li>
-                    <li><strong>Payment Method:</strong> Dynamic UPI QR code via GPay, PhonePe, Paytm, or BHIM.</li>
-                    <li><strong>Confirmation:</strong> Submit your 12-digit transaction UTR in My Bookings for instant admin matching.</li>
-                    <li><strong>Balance:</strong> Remaining 75% balance is paid at the vehicle pickup hub.</li>
+                    <li><strong>Verified Receiving UPI ID:</strong> <code>9486886986@ybl</code></li>
+                    <li><strong>Account Holder / Payee Name:</strong> Ms Krishma Priya S (K3L Rentals)</li>
+                    <li><strong>Exact Advance Rate:</strong> Exactly 25% of the total rental price.</li>
+                    <li><strong>Instructions:</strong> Open any UPI app (GPay, PhonePe, Paytm, BHIM, CRED) → Send to UPI ID <code>9486886986@ybl</code> → Verify payee name → Pay advance amount.</li>
+                    <li><strong>Verification:</strong> Copy the 12-digit UPI reference number (UTR) from your receipt and submit it in My Bookings. Admin verifies receipt before confirmation.</li>
+                    <li><strong>Remaining Balance:</strong> 75% balance is due upon physical vehicle handover at the pickup hub.</li>
                 </ul>
             `);
             return;
         }
 
-        // 4b. Cancellation Policy
+        // 5. Pickup & Return Inspections
+        if (lower.includes("inspection") || lower.includes("pickup") || lower.includes("return") || lower.includes("handover") || lower.includes("odometer") || lower.includes("photo") || lower.includes("damage")) {
+            appendMessage("bot", `
+                📸 <strong>4-Angle Inspection &amp; Vehicle Handover:</strong>
+                <ul style="margin-left: 18px; margin-top: 6px; font-size: 0.85rem; line-height: 1.5;">
+                    <li><strong>Pickup Handover:</strong> Admin and customer inspect vehicle together. 4 high-resolution photos (Front, Back, Left, Right), starting odometer reading, and fuel level are recorded.</li>
+                    <li><strong>Return Handover:</strong> Upon return, a matching 4-angle inspection is completed and compared side-by-side with pickup photos.</li>
+                    <li><strong>Damage Protection:</strong> Pre-existing scratches are documented so you are never charged for prior condition. Any new damage is fairly assessed by admin with photo evidence.</li>
+                </ul>
+            `);
+            return;
+        }
+
+        // 6. Live GPS Roadside Safety Tracking
+        if (lower.includes("gps") || lower.includes("tracking") || lower.includes("roadside") || lower.includes("safety") || lower.includes("location")) {
+            appendMessage("bot", `
+                📍 <strong>Voluntary Live GPS Roadside Safety:</strong>
+                <ul style="margin-left: 18px; margin-top: 6px; font-size: 0.85rem; line-height: 1.5;">
+                    <li><strong>Roadside Assistance:</strong> During active trips, you can voluntarily share live GPS coordinates with the K3L fleet hub for roadside support in hilly or remote areas.</li>
+                    <li><strong>Explicit Consent:</strong> Requires your browser permission and affirmative confirmation before sharing begins.</li>
+                    <li><strong>Customer Control:</strong> You have an instant "Stop Sharing" button at all times. Location sharing automatically terminates when the vehicle is returned.</li>
+                    <li><strong>Privacy Guarantee:</strong> GPS coordinates are strictly private — only visible to you and the fleet administrator.</li>
+                </ul>
+            `);
+            return;
+        }
+
+        // 7. Cancellation Policy
         if (lower.includes("cancel") || lower.includes("cancellation") || lower.includes("refund")) {
             appendMessage("bot", `
                 🔄 <strong>Cancellation Policy:</strong>
-                <p style="margin-top: 4px;">You can cancel your booking directly from the <strong>My Bookings</strong> page anytime before vehicle pickup. Advance deposit refunds are processed per rental guidelines to the original payment UPI ID within 2–3 business days.</p>
+                <p style="margin-top: 4px;">You can cancel your booking directly from the <strong>My Bookings</strong> page anytime before vehicle pickup. Cancelled bookings release the vehicle schedule back to the fleet immediately.</p>
             `);
             return;
         }
 
-        // 5. Budget / Cheap City Commuter
+        // 8. Specific vehicle query (e.g. "Is Thar available?" or "Creta price")
+        let matchedSpecific = null;
+        for (const v of chatFleet) {
+            const m = String(v.model || "").toLowerCase();
+            if (lower.includes(m) || (m.includes("thar") && lower.includes("thar")) || (m.includes("creta") && lower.includes("creta")) || (m.includes("bullet") && lower.includes("bullet"))) {
+                matchedSpecific = v;
+                break;
+            }
+        }
+
+        if (matchedSpecific) {
+            const price = Number(matchedSpecific.price_per_day || 0);
+            const advance = Math.round(price * 0.25);
+            const status = String(matchedSpecific.status || "available").toLowerCase();
+            const isAvail = status === "available";
+
+            let reply = `🚗 <strong>${escapeHTML(matchedSpecific.model)}</strong> (${escapeHTML(matchedSpecific.vehicle_number || 'TN-Fleet')}):<br>`;
+            reply += `<ul style="margin-left: 18px; margin-top: 6px; font-size: 0.85rem; line-height: 1.5;">`;
+            reply += `<li><strong>Category:</strong> ${escapeHTML(matchedSpecific.category || 'car').toUpperCase()} • ${escapeHTML(matchedSpecific.type || 'Standard')}</li>`;
+            reply += `<li><strong>Pickup Hub:</strong> 📍 ${escapeHTML(matchedSpecific.location || 'Coimbatore')}</li>`;
+            reply += `<li><strong>Daily Rental Rate:</strong> ₹${price.toLocaleString("en-IN")}/day</li>`;
+            reply += `<li><strong>25% Advance Required:</strong> ₹${advance.toLocaleString("en-IN")}/day</li>`;
+            reply += `<li><strong>Fleet Status:</strong> <span style="font-weight: 600; color: ${isAvail ? '#16a34a' : '#d97706'};">${escapeHTML(matchedSpecific.status || 'available')}</span></li>`;
+            reply += `</ul>`;
+
+            if (status === "maintenance") {
+                reply += `<p style="margin-top: 6px; color: #dc2626; font-size: 0.84rem;">⚠️ This vehicle is currently undergoing periodic fleet service and is not accepting bookings. Please choose another vehicle from our fleet.</p>`;
+            } else {
+                reply += `<div style="margin-top: 8px;"><a href="booking.html?id=${encodeURIComponent(matchedSpecific.id)}" style="background: #2563eb; color: white; padding: 6px 12px; border-radius: 4px; font-size: 0.82rem; text-decoration: none; font-weight: 600;">Reserve this Vehicle →</a></div>`;
+            }
+
+            appendMessage("bot", reply);
+            return;
+        }
+
+        // 9. Budget / Cheap City Commuter
         if (lower.includes("budget") || lower.includes("cheap") || lower.includes("low") || lower.includes("city") || lower.includes("economy")) {
-            const sortedByPrice = [...chatFleet].sort((a, b) => Number(a.price_per_day || 0) - Number(b.price_per_day || 0)).slice(0, 3);
+            const sortedByPrice = [...chatFleet]
+                .filter(v => v.status !== "maintenance")
+                .sort((a, b) => Number(a.price_per_day || 0) - Number(b.price_per_day || 0))
+                .slice(0, 3);
+
             let reply = `💰 <strong>Most Affordable Fleet Vehicles:</strong><br>`;
             reply += `<div style="display: flex; flex-direction: column; gap: 8px; margin-top: 8px;">`;
             sortedByPrice.forEach(v => {
@@ -389,9 +464,10 @@
 
         // Fallback default helpful response
         appendMessage("bot", `
-            I can help you select the ideal car or bike, explain our 18+ document verification, or guide you through the 25% advance payment.
+            I can help recommend cars or bikes for your travel plans, guide you through Age 18+ KYC verification, or explain our direct UPI advance payment.
+            <p style="margin-top: 6px; font-size: 0.82rem; color: #64748b;">Try asking: <em>"Best car for Ooty"</em>, <em>"How do I submit KYC?"</em>, or <em>"What is the UPI ID?"</em></p>
             <div style="margin-top: 8px;">
-                <a href="vehicles.html" style="color: #2563eb; font-weight: 600; text-decoration: underline;">Explore Full Fleet Catalog →</a>
+                <a href="vehicles.html" style="color: #2563eb; font-weight: 600; text-decoration: underline;">Explore Full Fleet Catalog (20 Vehicles) →</a>
             </div>
         `);
     }
@@ -411,4 +487,3 @@
         initChatbotUI();
     }
 })();
-

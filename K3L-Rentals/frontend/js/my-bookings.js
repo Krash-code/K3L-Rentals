@@ -450,12 +450,11 @@ function renderBookingCard(b) {
     `;
 }
 
-// Open 25% Advance Payment Modal
+// Open 25% Advance Payment Modal (Single Payment Method: Direct UPI ID)
 function openPaymentModal(booking) {
     activePayBooking = booking;
     const summary = document.getElementById("paymentModalSummary");
     const bookingIdInput = document.getElementById("payModalBookingId");
-    const upiQrImage = document.getElementById("upiQrImage");
     const utrInput = document.getElementById("utrNumberInput");
 
     bookingIdInput.value = booking.id;
@@ -479,12 +478,6 @@ function openPaymentModal(booking) {
             <strong>₹${advance.toLocaleString("en-IN")}</strong>
         </div>
     `;
-
-    // Generate UPI QR URI for configured receiving account (Ms Krishma Priya S / K3L Rentals):
-    const receivingUpi = "9486886986@ybl";
-    const payeeName = "Ms Krishma Priya S";
-    const upiUri = `upi://pay?pa=${receivingUpi}&pn=${encodeURIComponent(payeeName)}&am=${advance}&tn=K3L-Rental-${booking.id.substring(0, 8)}&cu=INR`;
-    upiQrImage.src = `https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(upiUri)}`;
 
     paymentModal.style.display = "flex";
 }
