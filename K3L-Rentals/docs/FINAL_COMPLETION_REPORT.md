@@ -15,7 +15,7 @@ All core requirements specified in the Final Master Prompt have been inspected, 
 - **Fleet Catalogue Preservation:** All 20 vehicles in `/vehicles` and all 3 maintenance records in `/maintenance` are preserved with clean initial statuses.
 - **QR-Code-Only Payment Flow:** Customer payment view features exclusively "Scan & Pay" with an official QR code, click-to-enlarge modal, 25% advance amount, 75% remaining balance, and 12-digit UTR input. All UPI ID text, mobile numbers, and copy buttons have been stripped from customer-facing interfaces.
 - **Payment Verification Truthfulness:** Payment status transitions to `Pending Verification`. It is never automatically marked as `Paid`. Because no genuine merchant QR image was pre-existing in git history, payment activation remains on standby until the owner uploads their genuine bank QR code image to `frontend/assets/payment-qr.png`.
-- **Automated Verification Scorecard:** **60 / 60 Tests Passed (100% Pass Rate)** across both comprehensive test suites (`test-cloud-e2e.js`: 35/35, `test-defect-audit.js`: 25/25).
+- **Automated Verification Scorecard:** **73 / 73 Tests Passed (100% Pass Rate)** across all test suites (`test-cloud-e2e.js`: 35/35, `test-defect-audit.js`: 25/25, `test-registration-race.js`: 13/13).
 
 ---
 
@@ -47,7 +47,14 @@ A controlled, dependency-checked data reset was executed via `scripts/cleanup-da
    - Never auto-provisions missing accounts on login.
 2. **`frontend/js/common.js`:**
    - Real-time `firebase.auth().onAuthStateChanged` listener validates that the authenticated UID exists in either `/users` or `/admins`.
-   - If a deleted, disabled, or unprofiled account accesses the site, the session is purged immediately via `auth.signOut()`, wiping `localStorage.user` and updating navbar to logged-out state.
+   - **Race Condition Resolution:** During customer registration (`register.html`, `window.isRegistrationInProgress`, `sessionStorage`, or recent account creation < 60s), the ghost-session purge is deferred. This ensures `common.js` does NOT prematurely sign out newly registered users before `register.js` completes creating `/users/{uid}` in Firestore.
+   - For deleted, disabled, or unprofiled accounts accessing other pages, the session is purged immediately via `auth.signOut()`, wiping `localStorage.user` and updating navbar to logged-out state.
+3. **`frontend/js/register.js` & Firestore Rules Hardening:**
+   - Coordinates registration state with `window.isRegistrationInProgress` and `sessionStorage`.
+   - Creates `/users/{uid}` using exact authenticated UID with strictly validated schema (`name`, `email`, `phone`, `address`, `dob`, `age`, `role: "customer"`, `kyc_status: "Not Submitted"`, `emailVerified: false`, `createdAt`).
+   - Firestore Security Rules enforce that customers can create ONLY their own initial profile with `hasOnly` schema enforcement, blocking role escalation, KYC tampering, or unauthenticated writes.
+   - Includes automatic orphan-recovery: if a prior attempt created the Auth user but was interrupted before Firestore profile creation, submitting with the same credentials recovers and finalizes the profile seamlessly.
+   - If profile creation fails, reports exact Firebase error code and message, and safely rolls back the partial Auth user to allow instant retry.
 3. **`frontend/js/admin-login.js`:**
    - Dedicated administrative portal verifies UID existence in `/admins/{uid}` with `role === "admin"`. Customers attempting admin login are signed out with access denied.
 

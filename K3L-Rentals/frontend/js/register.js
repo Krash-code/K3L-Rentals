@@ -120,6 +120,10 @@ if (registerForm) {
             submitBtn.textContent = "Creating Account & Sending Email...";
         }
 
+        // Set registration flag before ANY auth calls so common.js doesn't sign out mid-creation
+        window.isRegistrationInProgress = true;
+        sessionStorage.setItem("k3l_registration_in_progress", "true");
+
         let user = null;
 
         try {
@@ -132,7 +136,7 @@ if (registerForm) {
                 displayName: name
             });
 
-            // C. Save Customer Profile to Firestore /users/{uid}
+            // C. Save Customer Profile to Firestore /users/{uid} using exact authenticated UID
             await firebase.firestore().collection("users").doc(user.uid).set({
                 name: name,
                 email: email,
@@ -147,6 +151,10 @@ if (registerForm) {
 
             // D. Send Email Verification link to user's registered inbox
             await user.sendEmailVerification();
+
+            // Clear registration flag
+            window.isRegistrationInProgress = false;
+            sessionStorage.removeItem("k3l_registration_in_progress");
 
             // E. Show Success Message with Instructions
             message.innerHTML = `
@@ -171,26 +179,86 @@ if (registerForm) {
 
         } catch (error) {
             console.error("Registration failed:", error);
+            window.isRegistrationInProgress = false;
+            sessionStorage.removeItem("k3l_registration_in_progress");
 
-            // Cleanup partial Auth record if Firestore creation or email verification threw
-            if (user && error.code !== "auth/email-already-in-use") {
-                try {
-                    await user.delete();
-                } catch (cleanupErr) {
-                    console.warn("Could not rollback partial auth user:", cleanupErr);
-                }
-            }
-
+            // If account already exists in Auth, check if it was an orphaned account with missing profile
             if (error.code === "auth/email-already-in-use") {
+                try {
+                    window.isRegistrationInProgress = true;
+                    sessionStorage.setItem("k3l_registration_in_progress", "true");
+                    const cred = await firebase.auth().signInWithEmailAndPassword(email, password);
+                    const recoveredUser = cred.user;
+                    const prof = await firebase.firestore().collection("users").doc(recoveredUser.uid).get();
+
+                    if (!prof.exists) {
+                        console.log("Resuming interrupted profile creation for UID:", recoveredUser.uid);
+                        await recoveredUser.updateProfile({ displayName: name });
+                        await firebase.firestore().collection("users").doc(recoveredUser.uid).set({
+                            name: name,
+                            email: email,
+                            phone: phone,
+                            dob: dob,
+                            age: exactAge,
+                            role: "customer",
+                            kyc_status: "Not Submitted",
+                            emailVerified: false,
+                            createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                        });
+                        await recoveredUser.sendEmailVerification();
+                        window.isRegistrationInProgress = false;
+                        sessionStorage.removeItem("k3l_registration_in_progress");
+
+                        message.innerHTML = `
+                            <div style="background: #ecfdf5; border: 1px solid #10b981; color: #065f46; padding: 18px; border-radius: 10px; margin-top: 10px;">
+                                <h3 style="margin-bottom: 8px; font-size: 1.15rem; color: #065f46;">🎉 Registration Profile Completed!</h3>
+                                <p style="margin-bottom: 10px; font-size: 0.92rem;">
+                                    Your customer profile was successfully created and a verification email sent to <strong>${escapeHTML(email)}</strong>.
+                                </p>
+                                <p style="font-size: 0.88rem; color: #047857; margin-bottom: 14px;">
+                                    <strong>Next Step:</strong> Please check your email, click the verification link, and then proceed to login.
+                                </p>
+                                <a href="login.html" class="primary-btn" style="display: inline-block; padding: 10px 20px; font-size: 0.95rem; text-decoration: none;">
+                                    Proceed to Login →
+                                </a>
+                            </div>
+                        `;
+                        registerForm.reset();
+                        await firebase.auth().signOut();
+                        localStorage.removeItem("user");
+                        return;
+                    } else {
+                        await firebase.auth().signOut();
+                    }
+                } catch (recErr) {
+                    console.warn("Orphan recovery attempt notice:", recErr);
+                    await firebase.auth().signOut().catch(() => {});
+                } finally {
+                    window.isRegistrationInProgress = false;
+                    sessionStorage.removeItem("k3l_registration_in_progress");
+                }
                 showError("This email address is already registered. Please login or reset your password.");
-            } else if (error.code === "auth/invalid-email") {
-                showError("The email address format is invalid. Please check.");
-            } else if (error.code === "auth/weak-password") {
-                showError("Password is too weak. Please use at least 6 characters with mixed letters and numbers.");
-            } else if (error.code === "permission-denied") {
-                showError("Could not save your customer profile to Firestore. Please check permissions.");
             } else {
-                showError(error.message || "Registration failed. Please try again.");
+                // Rollback partial Auth record if Firestore creation or email verification threw
+                if (user) {
+                    try {
+                        await user.delete();
+                        console.log("Rolled back unprofiled Auth user:", user.uid);
+                    } catch (cleanupErr) {
+                        console.warn("Could not rollback partial auth user:", cleanupErr);
+                        await firebase.auth().signOut().catch(() => {});
+                    }
+                }
+
+                if (error.code === "auth/invalid-email") {
+                    showError("The email address format is invalid. Please check.");
+                } else if (error.code === "auth/weak-password") {
+                    showError("Password is too weak. Please use at least 6 characters with mixed letters and numbers.");
+                } else if (error.code === "permission-denied") {
+                    showError(`Permission Denied [${error.code}]: Could not save customer profile to Firestore. ${error.message || ""}`);
+                } else {
+                    showError(`Registration Error [${error.code || 'unknown'}]: ${error.message || "Registration failed. Please try again."}`);
+                }
             }
 
             if (submitBtn) {

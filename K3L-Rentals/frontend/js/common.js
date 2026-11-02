@@ -104,12 +104,26 @@ function updateNavbar() {
             // Verify Firestore profile existence to reject phantom/deleted sessions
             const firestore = db || (typeof firebase !== "undefined" ? firebase.firestore() : null);
             if (firestore) {
+                // Determine if registration is actively in progress
+                const isRegistering = (
+                    window.isRegistrationInProgress === true ||
+                    sessionStorage.getItem("k3l_registration_in_progress") === "true" ||
+                    window.location.pathname.endsWith("register.html") ||
+                    (user.metadata && user.metadata.creationTime && (Date.now() - new Date(user.metadata.creationTime).getTime() < 60000))
+                );
+
                 const [userDoc, adminDoc] = await Promise.all([
                     firestore.collection("users").doc(user.uid).get().catch(() => ({ exists: false })),
                     firestore.collection("admins").doc(user.uid).get().catch(() => ({ exists: false }))
                 ]);
 
                 if (!userDoc.exists && !adminDoc.exists) {
+                    if (isRegistering) {
+                        // Legitimate registration in progress: profile document is actively being created by register.js.
+                        // Do NOT sign out or destroy the session.
+                        console.log("Registration in progress for UID:", user.uid, "- deferring session validation.");
+                        return;
+                    }
                     console.warn("Invalid session: No customer or admin document found for UID:", user.uid);
                     await auth.signOut();
                     localStorage.removeItem("user");

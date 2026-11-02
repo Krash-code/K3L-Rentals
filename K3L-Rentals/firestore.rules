@@ -26,11 +26,15 @@ service cloud.firestore {
     match /users/{userId} {
       allow read: if isOwner(userId) || isAdmin();
 
-      // Customer can create initial profile
+      // Customer can create initial profile for their own UID only with strict field validation
       allow create: if (isAuthenticated() &&
         request.auth.uid == userId &&
         request.resource.data.get('role', 'customer') == 'customer' &&
-        request.resource.data.get('kyc_status', 'Not Submitted') in ['Not Submitted', 'Pending Review']) ||
+        request.resource.data.get('kyc_status', 'Not Submitted') in ['Not Submitted', 'Pending Review'] &&
+        request.resource.data.get('emailVerified', false) == false &&
+        request.resource.data.keys().hasOnly([
+          'name', 'email', 'phone', 'address', 'dob', 'age', 'role', 'kyc_status', 'emailVerified', 'createdAt'
+        ])) ||
         isAdmin();
 
       // Granular allowlist for customer updates:
@@ -40,9 +44,12 @@ service cloud.firestore {
         isOwner(userId) &&
         request.resource.data.diff(resource.data).affectedKeys().hasOnly([
           'name', 'phone', 'address', 'dob', 'id_type', 'id_document', 'dl_document',
-          'kyc_status', 'kyc_consent', 'kyc_submitted_at', 'updatedAt'
+          'kyc_status', 'kyc_consent', 'kyc_submitted_at', 'updatedAt', 'emailVerified'
         ]) &&
         request.resource.data.get('role', 'customer') == resource.data.get('role', 'customer') &&
+        // If emailVerified is being changed, it can only be set to true if the auth token is verified
+        (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['emailVerified']) ||
+          (request.auth.token.email_verified == true && request.resource.data.emailVerified == true)) &&
         // Prevent self-escalation to Approved
         (
           (request.resource.data.get('kyc_status', 'Not Submitted') in ['Not Submitted', 'Pending Review']) ||
