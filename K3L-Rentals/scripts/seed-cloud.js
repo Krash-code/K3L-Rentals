@@ -226,9 +226,8 @@ async function runSeed() {
             createdAt: new Date().toISOString()
         }, adminToken);
 
-        // Also seed schedule slot for date conflict detection
+        // Also seed schedule slot for date conflict detection (Sanitized - No PII/UID)
         await setFirestoreDoc(`vehicles/${bv.id}/schedules`, bookingId, {
-            userId: custUid,
             start_date: "2026-11-01",
             end_date: `2026-11-0${days + 1}`,
             status: "Confirmed",

@@ -637,14 +637,13 @@ async function confirmAdvancePayment(booking) {
             updatedAt: firebase.firestore.FieldValue.serverTimestamp()
         });
 
-        // 2. Lock schedule slot under vehicle
+        // 2. Lock schedule slot under vehicle (Sanitized - No PII/UID)
         if (booking.vehicleId) {
             await db.collection("vehicles")
                 .doc(booking.vehicleId)
                 .collection("schedules")
                 .doc(booking.id)
                 .set({
-                    userId: booking.userId,
                     start_date: booking.start_date,
                     end_date: booking.end_date,
                     status: "Confirmed",

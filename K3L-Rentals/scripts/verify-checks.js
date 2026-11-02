@@ -147,9 +147,8 @@ async function runVerification() {
     }, custToken);
     console.log(`3c. Booking: Created booking '${bId}' for vehicle '${vId}': HTTP ${bookRes.status}`);
 
-    // Schedule slot
+    // Schedule slot (Sanitized - No PII/UID)
     const schedRes = await createDoc(`vehicles/${vId}/schedules`, bId, {
-        userId: { stringValue: custUid },
         start_date: { stringValue: "2026-11-20" },
         end_date: { stringValue: "2026-11-23" },
         status: { stringValue: "Pending Review" }

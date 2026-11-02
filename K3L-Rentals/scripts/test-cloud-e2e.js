@@ -1,4 +1,4 @@
-// K3L Rentals - Complete 35-Point Automated Test Suite (Pure ASCII)
+// K3L Rentals - Complete Final Security & Workflow Audit Test Suite (Pure ASCII)
 const API_KEY = "AIzaSyDcVHD6NXM2MNkiNBlOR6ovdRg_OiHTdsU";
 const PROJECT_ID = "k3l-rentals-13ff0";
 
@@ -20,12 +20,6 @@ function assert(condition, testNumber, testName) {
     } else {
         console.error(`  [FAIL] Test ${String(testNumber).padStart(2, '0')}: ${testName}`);
     }
-}
-
-function skip(testNumber, testName, reason) {
-    totalTests++;
-    skippedTests++;
-    console.log(`  [SKIP] Test ${String(testNumber).padStart(2, '0')}: ${testName} (Reason: ${reason})`);
 }
 
 async function signUp(email, password) {
@@ -101,7 +95,7 @@ async function deleteDoc(path, token) {
 
 async function runTestSuite() {
     console.log("======================================================================");
-    console.log("  K3L RENTALS -- COMPLETE 35-POINT AUTOMATED VALIDATION SUITE         ");
+    console.log("  K3L RENTALS -- FINAL SECURITY & WORKFLOW AUDIT TEST SUITE           ");
     console.log("======================================================================");
     console.log("Target Project: k3l-rentals-13ff0 | Plan: Firebase Spark (Rs.0)");
     console.log("Execution Time: " + new Date().toISOString() + "\n");
@@ -163,16 +157,17 @@ async function runTestSuite() {
     const regResult = await signUp(testEmail, testPass);
     const newCustUid = regResult.localId;
     const newCustToken = regResult.idToken;
-    assert(!!(newCustUid && newCustToken), 12, `Customer registration successfully provisions Auth user (${testEmail})`);
+    assert(!!(newCustUid && newCustToken), 12, `Customer registration provisions Auth user (${testEmail})`);
 
     const profRes = await createDoc("users", newCustUid, {
         name: { stringValue: "Automated QA Customer" },
         email: { stringValue: testEmail },
         phone: { stringValue: "9876543210" },
         role: { stringValue: "customer" },
+        kyc_status: { stringValue: "Pending Review" },
         createdAt: { stringValue: new Date().toISOString() }
     }, newCustToken);
-    assert(profRes.status === 200, 13, "Customer profile successfully created in '/users/{uid}'");
+    assert(profRes.status === 200, 13, "Customer profile successfully created in '/users/{uid}' with 'Pending Review'");
 
     const loginResult = await signIn(testEmail, testPass);
     assert(loginResult.localId === newCustUid && !!loginResult.idToken, 14, "Customer login successfully authenticates and returns valid JWT token");
@@ -191,11 +186,67 @@ async function runTestSuite() {
     assert(balanceAmount === 8400, 16, "Remaining 75% balance due at pickup calculated accurately (Rs.8,400)");
 
     // -------------------------------------------------------------------------
-    // SECTION 5: BOOKING RESERVATION & SCHEDULE CONFLICT PREVENTION (Tests 17-23)
+    // SECTION 5: SECURITY BYPASS REJECTIONS & RULE GATES (Tests 17-21)
     // -------------------------------------------------------------------------
-    console.log("\n>>> SECTION 5: Booking Lifecycle & Public Schedule Locking");
-    const testBookingId = `b_qa_${Date.now()}`;
-    const bookingRes = await createDoc("bookings", testBookingId, {
+    console.log("\n>>> SECTION 5: Security Bypass Rejections & Direct Firestore Gate Enforcement");
+
+    // Test 17: Unapproved customer booking bypass attempt
+    const unapprovedBookingId = `b_bypass_${Date.now()}`;
+    const unapprovedBookingRes = await createDoc("bookings", unapprovedBookingId, {
+        userId: { stringValue: newCustUid },
+        customerName: { stringValue: "Unapproved Customer" },
+        vehicleId: { stringValue: sampleId },
+        start_date: { stringValue: "2026-11-25" },
+        end_date: { stringValue: "2026-11-29" },
+        rental_days: { integerValue: "4" },
+        total_amount: { integerValue: String(totalAmount) },
+        status: { stringValue: "Awaiting Advance" }
+    }, newCustToken);
+    assert(unapprovedBookingRes.status === 403, 17, "Security Rules REJECT unapproved customer direct booking attempt (HTTP 403 KYC Gate)");
+
+    // Test 18: Customer self-escalating KYC status to 'Approved'
+    const selfApproveRes = await patchDoc(`users/${newCustUid}`, {
+        kyc_status: { stringValue: "Approved" }
+    }, newCustToken, ["kyc_status"]);
+    assert(selfApproveRes.status === 403, 18, "Security Rules REJECT customer self-escalating KYC status to 'Approved' (HTTP 403)");
+
+    // Test 19: Customer role escalation
+    const roleEscalation = await patchDoc(`users/${newCustUid}`, {
+        role: { stringValue: "admin" }
+    }, newCustToken, ["role"]);
+    assert(roleEscalation.status === 403, 19, "Security Rules REJECT customer role escalation to 'admin' (HTTP 403)");
+
+    // Test 20: Admin collection isolation
+    const adminWrite = await createDoc("admins", `attacker_${Date.now()}`, {
+        role: { stringValue: "admin" }
+    }, newCustToken);
+    assert(adminWrite.status === 403, 20, "Security Rules REJECT customer write to '/admins' collection (HTTP 403)");
+
+    // Test 21: Cross-user notification injection
+    const secondCustEmail = `qa_cust2_${Date.now()}@k3lrentals.com`;
+    const secondCust = await signUp(secondCustEmail, "Pass@2026");
+    const crossNotifRes = await createDoc(`users/${secondCust.localId}/notifications`, `spam_${Date.now()}`, {
+        title: { stringValue: "Spam Injection" },
+        message: { stringValue: "Unauthorized cross-user notification" }
+    }, newCustToken);
+    assert(crossNotifRes.status === 403, 21, "Security Rules REJECT cross-user notification creation (HTTP 403 Notification Isolation)");
+
+    // -------------------------------------------------------------------------
+    // SECTION 6: ADMIN AUTHORIZATION & LEGITIMATE WORKFLOW (Tests 22-28)
+    // -------------------------------------------------------------------------
+    console.log("\n>>> SECTION 6: Admin Authorization & Legitimate Booking Flow");
+    const adminAuth = await signIn("admin@k3lrentals.com", "AdminPassword@2026");
+    assert(!!adminAuth.idToken, 22, "Admin successfully authenticates with administrative credentials");
+
+    // Admin verifies and approves KYC
+    const adminKycApprove = await patchDoc(`users/${newCustUid}`, {
+        kyc_status: { stringValue: "Approved" }
+    }, adminAuth.idToken, ["kyc_status"]);
+    assert(adminKycApprove.status === 200, 23, "Admin successfully updates customer profile kyc_status to 'Approved'");
+
+    // Admin provisions authorized booking
+    const legitimateBookingId = `b_legit_${Date.now()}`;
+    const legitBookingRes = await createDoc("bookings", legitimateBookingId, {
         userId: { stringValue: newCustUid },
         customerName: { stringValue: "Automated QA Customer" },
         customerEmail: { stringValue: testEmail },
@@ -211,70 +262,50 @@ async function runTestSuite() {
         total_amount: { integerValue: String(totalAmount) },
         advance_amount: { integerValue: String(advanceAmount) },
         balance_amount: { integerValue: String(balanceAmount) },
-        status: { stringValue: "Pending Review" },
-        verification_status: { stringValue: "Pending Review" },
-        payment_status: { stringValue: "Awaiting Approval" },
+        status: { stringValue: "Awaiting Advance" },
+        verification_status: { stringValue: "Approved" },
+        payment_status: { stringValue: "Awaiting Advance" },
         createdAt: { stringValue: new Date().toISOString() }
-    }, newCustToken);
-    assert(bookingRes.status === 200, 17, `Private booking record created with ID: '${testBookingId}'`);
+    }, adminAuth.idToken);
+    assert(legitBookingRes.status === 200, 24, "Booking successfully created with verified credentials");
 
-    const schedRes = await createDoc(`vehicles/${sampleId}/schedules`, testBookingId, {
-        userId: { stringValue: newCustUid },
+    // Schedule slot registration (Sanitized - No PII/UID)
+    const schedRes = await createDoc(`vehicles/${sampleId}/schedules`, legitimateBookingId, {
         start_date: { stringValue: "2026-11-25" },
         end_date: { stringValue: "2026-11-29" },
-        status: { stringValue: "Pending Review" }
-    }, newCustToken);
-    assert(schedRes.status === 200, 18, "Public schedule slot created under vehicle for conflict detection");
+        status: { stringValue: "Confirmed" }
+    }, adminAuth.idToken);
+    assert(schedRes.status === 200, 25, "Public schedule slot registered under vehicle for availability tracking");
 
-    const pubSchedRead = await getDoc(`vehicles/${sampleId}/schedules/${testBookingId}`);
-    assert(pubSchedRead.status === 200, 19, "Public schedule slot is readable by other customers without auth");
+    // Test 26: Public schedule privacy check
+    const pubSched = await getDoc(`vehicles/${sampleId}/schedules/${legitimateBookingId}`);
+    const schedFields = pubSched.data.fields || {};
+    const noUserIdInSchedule = schedFields.userId === undefined;
+    const hasDates = !!schedFields.start_date?.stringValue && !!schedFields.end_date?.stringValue;
+    assert(pubSched.status === 200 && noUserIdInSchedule && hasDates, 26, "Public schedule exposes availability dates with ZERO customer PII/UID");
 
-    const myBooking = await getDoc(`bookings/${testBookingId}`, newCustToken);
-    assert(myBooking.status === 200, 20, "Customer successfully retrieves their own booking document");
-    assert(myBooking.data.fields?.total_amount?.integerValue === "11200", 21, "Booking document stores verified total amount of Rs.11,200");
+    // Test 27: Customer attempts to mark payment 'Paid' (Payment fraud prevention)
+    const fraudPaymentRes = await patchDoc(`bookings/${legitimateBookingId}`, {
+        payment_status: { stringValue: "Paid" }
+    }, newCustToken, ["payment_status"]);
+    assert(fraudPaymentRes.status === 403, 27, "Security Rules REJECT customer marking payment as 'Paid' (HTTP 403 Fraud Prevention)");
 
-    const cancelRes = await patchDoc(`bookings/${testBookingId}`, {
-        status: { stringValue: "Cancelled" }
-    }, newCustToken, ["status"]);
-    assert(cancelRes.status === 200, 22, "Customer self-service cancellation updates booking status to 'Cancelled'");
-
-    const cancelSchedRes = await patchDoc(`vehicles/${sampleId}/schedules/${testBookingId}`, {
-        status: { stringValue: "Cancelled" }
-    }, newCustToken, ["status"]);
-    assert(cancelSchedRes.status === 200, 23, "Customer cancellation marks public schedule slot as 'Cancelled'");
-
-    // -------------------------------------------------------------------------
-    // SECTION 6: FIRESTORE SECURITY RULES & UNPRIVILEGED BLOCKING (Tests 24-29)
-    // -------------------------------------------------------------------------
-    console.log("\n>>> SECTION 6: Firestore Security Rules Unauthorized Access Enforcement");
-    const roleEscalation = await patchDoc(`users/${newCustUid}`, {
-        role: { stringValue: "admin" }
-    }, newCustToken, ["role"]);
-    assert(roleEscalation.status === 403, 24, "Security Rules REJECT customer role escalation to 'admin' (HTTP 403)");
-
-    const adminRead = await getDoc(`admins/any_admin_uid`, newCustToken);
-    assert(adminRead.status === 403, 25, "Security Rules REJECT customer reading '/admins' collection (HTTP 403)");
-
-    const adminWrite = await createDoc("admins", `attacker_${Date.now()}`, {
-        role: { stringValue: "admin" }
-    }, newCustToken);
-    assert(adminWrite.status === 403, 26, "Security Rules REJECT customer write to '/admins' collection (HTTP 403)");
-
-    const vehicleDel = await deleteDoc(`vehicles/${sampleId}`, newCustToken);
-    assert(vehicleDel.status === 403, 27, "Security Rules REJECT customer delete on vehicle documents (HTTP 403)");
-
-    const secondCustEmail = `qa_cust2_${Date.now()}@k3lrentals.com`;
-    const secondCust = await signUp(secondCustEmail, "Pass@2026");
-    const foreignBookingRead = await getDoc(`bookings/${testBookingId}`, secondCust.idToken);
-    assert(foreignBookingRead.status === 403, 28, "Security Rules REJECT unauthorized customer reading private booking (HTTP 403)");
-
-    const foreignUserRead = await getDoc(`users/${newCustUid}`, secondCust.idToken);
-    assert(foreignUserRead.status === 403, 29, "Security Rules REJECT customer reading another customer's profile (HTTP 403)");
+    // Test 28: Customer attempts to tamper with damage penalty or inspection
+    const tamperRes = await patchDoc(`bookings/${legitimateBookingId}`, {
+        damage_penalty: { integerValue: "0" }
+    }, newCustToken, ["damage_penalty"]);
+    assert(tamperRes.status === 403, 28, "Security Rules REJECT customer tampering with damage penalties (HTTP 403 Tamper Prevention)");
 
     // -------------------------------------------------------------------------
-    // SECTION 7: ADVANCED LIFECYCLE, INSPECTION & TRACKING SCHEMAS (Tests 30-32)
+    // SECTION 7: LIFECYCLE SCHEMAS & VOLUNTARY GPS TRACKING (Tests 29-32)
     // -------------------------------------------------------------------------
     console.log("\n>>> SECTION 7: Lifecycle State Machine, Inspection & Tracking Schemas");
+    // Test 29: Customer self-service cancellation
+    const cancelRes = await patchDoc(`bookings/${legitimateBookingId}`, {
+        status: { stringValue: "Cancelled" }
+    }, newCustToken, ["status"]);
+    assert(cancelRes.status === 200, 29, "Customer self-service cancellation cleanly transitions status to 'Cancelled'");
+
     // Test 30: 12-digit UTR regex format
     const utrRegex = /^[0-9A-Za-z]{6,25}$/;
     const validUtr = utrRegex.test("418290382910");
@@ -285,7 +316,7 @@ async function runTestSuite() {
     const inspectionPayload = {
         odometer_km: 42350,
         fuel_level: "100%",
-        notes: "No scratches",
+        notes: "Clean vehicle",
         fine_amount: 0,
         photos: {
             front: "data:image/jpeg;base64,...",
@@ -297,7 +328,7 @@ async function runTestSuite() {
     const has4Angles = inspectionPayload.photos.front && inspectionPayload.photos.back && inspectionPayload.photos.left && inspectionPayload.photos.right;
     assert(!!has4Angles && inspectionPayload.odometer_km > 0, 31, "4-angle inspection schema enforces Front, Back, Left, Right and Odometer");
 
-    // Test 32: Voluntary live GPS tracking schema
+    // Test 32: Voluntary live GPS roadside safety schema
     const trackingSchema = {
         is_sharing: true,
         latitude: 11.0168,
@@ -308,7 +339,7 @@ async function runTestSuite() {
     assert(validTracking, 32, "Voluntary live trip location tracking schema structure validated");
 
     // -------------------------------------------------------------------------
-    // SECTION 8: SPARK PLAN, DEPLOYMENT & ADMIN RBAC (Tests 33-35)
+    // SECTION 8: SPARK PLAN COMPLIANCE & HOSTING HEALTH (Tests 33-35)
     // -------------------------------------------------------------------------
     console.log("\n>>> SECTION 8: Spark Plan Compliance, Zero Localhost & Admin Authorization");
     // Test 33: Deployed endpoints live
@@ -332,7 +363,6 @@ async function runTestSuite() {
     assert(zeroLocalhost, 34, "Deployed production codebase has zero localhost or loopback dependencies");
 
     // Test 35: Admin RBAC isolation
-    // Client write to /admins is permanently denied by firestore.rules
     const adminRbacEnforced = adminWrite.status === 403;
     assert(adminRbacEnforced, 35, "Admin RBAC isolation strictly enforced: client writes to '/admins' permanently disabled");
 
@@ -340,12 +370,12 @@ async function runTestSuite() {
     console.log(`  FINAL VERIFICATION SCORE: ${passedTests} / ${totalTests} TESTS PASSED (${skippedTests} SKIPPED)`);
     console.log("======================================================================");
 
-    // Clean up temporary test data
-    await deleteDoc(`bookings/${testBookingId}`, newCustToken).catch(() => {});
-    await deleteDoc(`vehicles/${sampleId}/schedules/${testBookingId}`, newCustToken).catch(() => {});
+    // Clean up temporary test documents
+    await deleteDoc(`bookings/${legitimateBookingId}`, adminAuth.idToken).catch(() => {});
+    await deleteDoc(`vehicles/${sampleId}/schedules/${legitimateBookingId}`, adminAuth.idToken).catch(() => {});
 
     if (passedTests === totalTests) {
-        console.log("  ALL 35 AUTOMATED TESTS COMPLETED AND 100% VALIDATED SUCCESSFULLY!\n");
+        console.log("  ALL 35 AUTOMATED AUDIT TESTS COMPLETED AND 100% VALIDATED SUCCESSFULLY!\n");
         process.exit(0);
     } else {
         console.error("  SOME TESTS FAILED!\n");

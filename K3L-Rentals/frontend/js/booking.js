@@ -725,13 +725,12 @@ if (bookingForm) {
 
             await newBookingRef.set(bookingPayload);
 
-            // Also create schedule reservation in the vehicle's subcollection
+            // Also create schedule reservation in the vehicle's subcollection (Sanitized - No PII/UID)
             await db.collection("vehicles")
                 .doc(vehicleId)
                 .collection("schedules")
                 .doc(bookingId)
                 .set({
-                    userId: user.uid,
                     start_date: startDate,
                     end_date: endDate,
                     status: bStatus,

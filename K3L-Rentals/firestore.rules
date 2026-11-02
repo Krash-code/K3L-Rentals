@@ -15,29 +15,48 @@ service cloud.firestore {
       return isAuthenticated() && exists(/databases/$(database)/documents/admins/$(request.auth.uid));
     }
 
+    function isKycApproved(userId) {
+      return exists(/databases/$(database)/documents/users/$(userId)) &&
+        get(/databases/$(database)/documents/users/$(userId)).data.get('kyc_status', '') == 'Approved';
+    }
+
     // ----------------------------------------------------
     // USERS COLLECTION (Customer Profiles & In-App Notifications)
     // ----------------------------------------------------
     match /users/{userId} {
       allow read: if isOwner(userId) || isAdmin();
 
+      // Customer can create initial profile
       allow create: if (isAuthenticated() &&
         request.auth.uid == userId &&
-        request.resource.data.get('role', 'customer') == 'customer') ||
+        request.resource.data.get('role', 'customer') == 'customer' &&
+        request.resource.data.get('kyc_status', 'Not Submitted') in ['Not Submitted', 'Pending Review']) ||
         isAdmin();
 
-      allow update: if (isOwner(userId) &&
+      // Granular allowlist for customer updates:
+      // Customers cannot alter 'role', 'kyc_reviewed_by', 'kyc_reviewed_at', 'kyc_rejection_reason',
+      // and CANNOT self-escalate kyc_status to 'Approved'.
+      allow update: if isAdmin() || (
+        isOwner(userId) &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'name', 'phone', 'address', 'dob', 'id_type', 'id_document', 'dl_document',
+          'kyc_status', 'kyc_consent', 'kyc_submitted_at', 'updatedAt'
+        ]) &&
         request.resource.data.get('role', 'customer') == resource.data.get('role', 'customer') &&
-        // Customer cannot escalate their own KYC verification status to Approved
-        (request.resource.data.get('kyc_status', 'Not Submitted') != 'Approved' || resource.data.get('kyc_status', 'Not Submitted') == 'Approved')) ||
-        isAdmin();
+        // Prevent self-escalation to Approved
+        (
+          (request.resource.data.get('kyc_status', 'Not Submitted') in ['Not Submitted', 'Pending Review']) ||
+          (resource.data.get('kyc_status', 'Not Submitted') == 'Approved' && request.resource.data.get('kyc_status', 'Not Submitted') == 'Approved')
+        )
+      );
 
       allow delete: if isAdmin();
 
-      // Customer notifications subcollection
+      // Customer notifications subcollection (RESTRICTED TO OWNER OR ADMIN)
       match /notifications/{notifId} {
         allow read, update, delete: if isOwner(userId) || isAdmin();
-        allow create: if isAuthenticated();
+        // Prevent cross-user notification spam: Only the profile owner or an admin can create notifications
+        allow create: if isOwner(userId) || isAdmin();
       }
     }
 
@@ -50,25 +69,36 @@ service cloud.firestore {
     }
 
     // ----------------------------------------------------
-    // VEHICLES COLLECTION (Fleet Catalog & Schedules)
+    // VEHICLES COLLECTION (Fleet Catalog & Public Schedules)
     // ----------------------------------------------------
     match /vehicles/{vehicleId} {
       allow read: if true;
       allow create, delete, update: if isAdmin();
 
       // Public date schedules for date-based availability & conflict detection
+      // PRIVACY ENFORCEMENT: Schedule documents MUST NOT expose userId or customer details.
       match /schedules/{scheduleId} {
         allow read: if true;
 
-        allow create: if (isAuthenticated() &&
-          request.resource.data.userId == request.auth.uid &&
+        // Schedule creation allowed if Admin OR if authenticated customer owns the corresponding booking
+        allow create: if isAdmin() || (
+          isAuthenticated() &&
+          exists(/databases/$(database)/documents/bookings/$(scheduleId)) &&
+          get(/databases/$(database)/documents/bookings/$(scheduleId)).data.userId == request.auth.uid &&
+          request.resource.data.keys().hasOnly(['start_date', 'end_date', 'status', 'createdAt', 'updatedAt']) &&
           request.resource.data.start_date is string &&
           request.resource.data.end_date is string &&
-          request.resource.data.end_date > request.resource.data.start_date) || isAdmin();
+          request.resource.data.end_date > request.resource.data.start_date
+        );
 
-        allow update: if (isAuthenticated() && resource.data.userId == request.auth.uid &&
+        // Schedule cancellation allowed by Admin or booking owner
+        allow update: if isAdmin() || (
+          isAuthenticated() &&
+          exists(/databases/$(database)/documents/bookings/$(scheduleId)) &&
+          get(/databases/$(database)/documents/bookings/$(scheduleId)).data.userId == request.auth.uid &&
           request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'updatedAt']) &&
-          request.resource.data.status == 'Cancelled') || isAdmin();
+          request.resource.data.status == 'Cancelled'
+        );
 
         allow delete: if isAdmin();
       }
@@ -80,26 +110,38 @@ service cloud.firestore {
     match /bookings/{bookingId} {
       allow read: if (isAuthenticated() && resource.data.userId == request.auth.uid) || isAdmin();
 
-      allow create: if (isAuthenticated() &&
-        request.resource.data.userId == request.auth.uid &&
+      // Booking creation gate:
+      // 1. Authenticated customer
+      // 2. Email must be verified (request.auth.token.email_verified == true)
+      // 3. KYC status must be 'Approved' in /users/{uid}
+      // 4. Initial payment status CANNOT be 'Paid' (only Awaiting Advance / Pending Review / Awaiting Approval)
+      allow create: if isAdmin() || (
+        isAuthenticated() &&
+        request.auth.token.email_verified == true &&
+        request.auth.uid == request.resource.data.userId &&
+        isKycApproved(request.auth.uid) &&
         request.resource.data.rental_days > 0 &&
         request.resource.data.total_amount > 0 &&
         request.resource.data.start_date is string &&
         request.resource.data.end_date is string &&
-        request.resource.data.end_date > request.resource.data.start_date) || isAdmin();
+        request.resource.data.end_date > request.resource.data.start_date &&
+        request.resource.data.get('payment_status', 'Awaiting Advance') in ['Awaiting Advance', 'Awaiting Approval', 'Pending Review', 'Pending Verification'] &&
+        request.resource.data.get('status', 'Awaiting Advance') in ['Awaiting Advance', 'Pending Review', 'Confirmed']
+      );
 
       // Granular update permissions:
       // 1. Admin can update anything (approve docs, confirm payment, record inspection, complete trip)
       // 2. Customer can:
       //    a) Cancel booking
-      //    b) Submit 25% advance payment UTR when approved
+      //    b) Submit 25% advance payment UTR when approved (NEVER mark as Paid!)
       //    c) Resubmit identity / DL documents if previously rejected
+      //    d) Voluntary live trip location tracking during active trips
       allow update: if isAdmin() || (
         isAuthenticated() && resource.data.userId == request.auth.uid && (
           // a) Cancellation
           (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'updatedAt']) &&
            request.resource.data.status == 'Cancelled') ||
-          // b) Payment Reference Submission
+          // b) Payment Reference Submission (Enforces 'Pending Verification', NEVER 'Paid')
           (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['payment_status', 'utr_number', 'payment_method', 'payment_submitted_at', 'updatedAt']) &&
            request.resource.data.payment_status == 'Pending Verification' &&
            request.resource.data.utr_number is string &&
