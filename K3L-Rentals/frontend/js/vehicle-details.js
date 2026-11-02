@@ -90,6 +90,40 @@ async function loadVehicleDetails() {
             `;
         }
 
+        // Check customer KYC verification status if logged in
+        let kycStatusBadge = "";
+        try {
+            const authObj = typeof firebase !== "undefined" && firebase.auth ? firebase.auth() : null;
+            if (authObj && authObj.currentUser) {
+                const uDoc = await firestore.collection("users").doc(authObj.currentUser.uid).get();
+                if (uDoc.exists) {
+                    const uData = uDoc.data();
+                    if (uData.kyc_status === "Approved") {
+                        kycStatusBadge = `
+                            <div style="margin-top: 10px; font-size: 0.85rem; color: #166534; display: flex; align-items: center; gap: 6px;">
+                                <span style="background: #dcfce7; color: #166534; padding: 2px 8px; border-radius: 4px; font-weight: 600;">✓ Driver KYC Verified</span>
+                                <span>You are pre-cleared to book this vehicle.</span>
+                            </div>
+                        `;
+                    } else if (uData.kyc_status === "Pending Review") {
+                        kycStatusBadge = `
+                            <div style="margin-top: 10px; font-size: 0.85rem; color: #92400e;">
+                                ⏳ Your KYC documents are currently under admin review. <a href="kyc.html" style="text-decoration: underline; font-weight: 600; color: #b45309;">Check Status →</a>
+                            </div>
+                        `;
+                    } else {
+                        kycStatusBadge = `
+                            <div style="margin-top: 10px; font-size: 0.85rem; color: #1e40af;">
+                                🪪 Identity verification (Aadhaar &amp; DL) required before booking. <a href="kyc.html" style="text-decoration: underline; font-weight: 600; color: #2563eb;">Verify Now →</a>
+                            </div>
+                        `;
+                    }
+                }
+            }
+        } catch (e) {
+            console.warn("Could not check user KYC badge:", e);
+        }
+
         container.innerHTML = `
             <div class="details-card">
                 <div class="details-image">
@@ -144,6 +178,7 @@ async function loadVehicleDetails() {
                                        class="primary-btn" style="display:inline-block; padding: 12px 24px; font-size:1.1rem;">
                                         Book This Vehicle
                                     </a>
+                                    ${kycStatusBadge}
                                 `
                                 : `
                                     <div style="background: #fff5f5; border: 1px solid #feb2b2; padding: 12px; border-radius: 6px; color: #c53030;">

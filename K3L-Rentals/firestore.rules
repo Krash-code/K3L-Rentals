@@ -27,7 +27,9 @@ service cloud.firestore {
         isAdmin();
 
       allow update: if (isOwner(userId) &&
-        request.resource.data.get('role', 'customer') == resource.data.get('role', 'customer')) ||
+        request.resource.data.get('role', 'customer') == resource.data.get('role', 'customer') &&
+        // Customer cannot escalate their own KYC verification status to Approved
+        (request.resource.data.get('kyc_status', 'Not Submitted') != 'Approved' || resource.data.get('kyc_status', 'Not Submitted') == 'Approved')) ||
         isAdmin();
 
       allow delete: if isAdmin();

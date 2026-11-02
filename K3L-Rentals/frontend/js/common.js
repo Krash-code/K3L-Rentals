@@ -55,6 +55,7 @@ function updateNavbar() {
     const registerLink = document.getElementById("registerLink");
     const logoutBtn = document.getElementById("logoutBtn");
     const bookingsLink = document.getElementById("bookingsLink");
+    const kycLink = document.getElementById("kycLink");
     const userGreeting = document.getElementById("userGreeting");
 
     if (!auth) return;
@@ -78,6 +79,12 @@ function updateNavbar() {
             bookingsLink.classList.toggle("hidden", !loggedIn);
             if (!loggedIn) bookingsLink.style.display = "none";
             else bookingsLink.style.display = "";
+        }
+
+        if (kycLink) {
+            kycLink.classList.toggle("hidden", !loggedIn);
+            if (!loggedIn) kycLink.style.display = "none";
+            else kycLink.style.display = "";
         }
 
         if (logoutBtn) {

@@ -1,11 +1,11 @@
-// K3L Rentals - AI Vehicle & Travel Recommendation Assistant
+// K3L Rentals - Rule-Based Vehicle & Travel Recommendation Assistant
 (function () {
     const db = window.db || (typeof firebase !== "undefined" ? firebase.firestore() : null);
 
     let chatFleet = [];
     let isFleetLoaded = false;
 
-    // Load available fleet vehicles for dynamic AI recommendations
+    // Load available fleet vehicles for dynamic recommendations
     async function fetchFleet() {
         if (!db || isFleetLoaded) return;
         try {
@@ -36,8 +36,8 @@
                     <div style="display: flex; align-items: center; gap: 10px;">
                         <span style="font-size: 1.4rem;">🚗</span>
                         <div>
-                            <strong style="font-size: 0.95rem; display: block;">K3L Travel Assistant</strong>
-                            <small style="color: #4ade80; font-size: 0.75rem;">● Online • Live Fleet Recommendations</small>
+                            <strong style="font-size: 0.95rem; display: block;">K3L Recommendation Assistant</strong>
+                            <small style="color: #4ade80; font-size: 0.75rem;">● Online • Rule-Based Fleet Advisor</small>
                         </div>
                     </div>
                     <button id="closeChatBtn" style="background: none; border: none; color: #94a3b8; font-size: 1.4rem; cursor: pointer;">&times;</button>
@@ -47,8 +47,8 @@
                 <div id="chatbotMessages" style="flex: 1; padding: 16px; overflow-y: auto; background: #f8fafc; display: flex; flex-direction: column; gap: 12px;">
                     <!-- Initial Welcome Message -->
                     <div class="chat-msg bot-msg" style="align-self: flex-start; max-width: 88%; background: white; border: 1px solid #e2e8f0; border-radius: 12px; padding: 12px 14px; box-shadow: 0 1px 2px rgba(0,0,0,0.05); font-size: 0.88rem; line-height: 1.45; color: #1e293b;">
-                        👋 Hello! I am your <strong>K3L Travel &amp; Vehicle Assistant</strong>.
-                        <p style="margin-top: 6px;">Looking for vehicle suggestions for an Ooty road trip, weekend bike ride, or rental rules? Pick a quick option below or ask me anything!</p>
+                        👋 Hello! I am your <strong>K3L Rule-Based Vehicle Recommendation Assistant</strong>.
+                        <p style="margin-top: 6px;">Looking for vehicle suggestions for an Ooty road trip, weekend bike ride, KYC verification, or rental policies? Pick a quick option below or ask me anything!</p>
                     </div>
 
                     <!-- Quick Suggestion Chips -->
@@ -324,26 +324,42 @@
             return;
         }
 
-        // 3. Rental Rules & Age
-        if (lower.includes("rule") || lower.includes("age") || lower.includes("document") || lower.includes("licence") || lower.includes("license") || lower.includes("aadhaar") || lower.includes("pan")) {
+        // 3. Rental Rules & Age & KYC
+        if (lower.includes("rule") || lower.includes("age") || lower.includes("document") || lower.includes("licence") || lower.includes("license") || lower.includes("aadhaar") || lower.includes("pan") || lower.includes("kyc")) {
             appendMessage("bot", `
-                📋 <strong>K3L Rentals Policies:</strong>
+                📋 <strong>K3L Rentals Policies &amp; KYC Verification:</strong>
                 <ul style="margin-left: 18px; margin-top: 6px; font-size: 0.85rem; line-height: 1.5;">
-                    <li><strong>Minimum Age:</strong> 18 years old or older.</li>
-                    <li><strong>Required Documents:</strong> Valid Driving Licence (DL) + Aadhaar Card OR PAN Card.</li>
-                    <li><strong>Rental Duration:</strong> 1 to 7 consecutive days.</li>
-                    <li><strong>Verification:</strong> Upload documents online; admin reviews them in 15–30 mins.</li>
+                    <li><strong>Minimum Age:</strong> Exactly 18 years old or older.</li>
+                    <li><strong>Required Driver Documents:</strong> Valid Driving Licence (DL) + Aadhaar Card OR PAN Card.</li>
+                    <li><strong>ID Verification (KYC):</strong> One-time admin review via the <a href="kyc.html" style="color: #2563eb; font-weight: 600;">KYC Portal</a> unlocks vehicle and date reservations.</li>
+                    <li><strong>Rental Duration:</strong> 1 to 7 consecutive days maximum per booking.</li>
+                    <li><strong>4-Angle Inspection:</strong> Front, Back, Left, Right photos + odometer recorded at vehicle pickup and return.</li>
                 </ul>
             `);
             return;
         }
 
-        // 4. Advance Payment
-        if (lower.includes("advance") || lower.includes("payment") || lower.includes("pay") || lower.includes("upi") || lower.includes("deposit") || lower.includes("25%")) {
+        // 4. Advance Payment & UPI
+        if (lower.includes("advance") || lower.includes("payment") || lower.includes("pay") || lower.includes("upi") || lower.includes("deposit") || lower.includes("25%") || lower.includes("utr")) {
             appendMessage("bot", `
-                💳 <strong>25% Advance Payment Policy:</strong>
-                <p style="margin-top: 4px;">To guarantee and lock your vehicle without cancellations, K3L Rentals collects <strong>exactly 25% of the total rental amount</strong> as an advance deposit upon document approval.</p>
-                <p style="margin-top: 6px;">You can pay via dynamic <strong>UPI QR code</strong> (GPay/PhonePe/Paytm/BHIM) and submit your 12-digit UTR. The remaining <strong>75% balance</strong> is settled at the vehicle pickup hub!</p>
+                💳 <strong>25% Advance Payment &amp; UPI Protocol:</strong>
+                <p style="margin-top: 4px;">To guarantee fleet allocation, K3L Rentals collects <strong>exactly 25% of the total rental amount</strong> as an advance deposit upon KYC document approval.</p>
+                <ul style="margin-left: 18px; margin-top: 6px; font-size: 0.85rem; line-height: 1.5;">
+                    <li><strong>Receiving UPI ID:</strong> <code>9486886986@ybl</code></li>
+                    <li><strong>Account Holder / Payee:</strong> Ms Krishma Priya S (K3L Rentals)</li>
+                    <li><strong>Payment Method:</strong> Dynamic UPI QR code via GPay, PhonePe, Paytm, or BHIM.</li>
+                    <li><strong>Confirmation:</strong> Submit your 12-digit transaction UTR in My Bookings for instant admin matching.</li>
+                    <li><strong>Balance:</strong> Remaining 75% balance is paid at the vehicle pickup hub.</li>
+                </ul>
+            `);
+            return;
+        }
+
+        // 4b. Cancellation Policy
+        if (lower.includes("cancel") || lower.includes("cancellation") || lower.includes("refund")) {
+            appendMessage("bot", `
+                🔄 <strong>Cancellation Policy:</strong>
+                <p style="margin-top: 4px;">You can cancel your booking directly from the <strong>My Bookings</strong> page anytime before vehicle pickup. Advance deposit refunds are processed per rental guidelines to the original payment UPI ID within 2–3 business days.</p>
             `);
             return;
         }

@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Identity Verification (KYC) - K3L Rentals</title>
+    <link rel="stylesheet" href="css/style.css">
+    <style>
+        .kyc-container {
+            max-width: 820px;
+            margin: 40px auto;
+            padding: 0 20px;
+        }
+        .kyc-card {
+            background: white;
+            border: 1px solid var(--slate-200);
+            border-radius: var(--radius-lg);
+            padding: 32px;
+            box-shadow: var(--shadow-sm);
+            margin-bottom: 24px;
+        }
+        .kyc-status-badge {
+            display: inline-block;
+            padding: 6px 16px;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .status-not_submitted {
+            background: var(--slate-100);
+            color: var(--slate-700);
+            border: 1px solid var(--slate-300);
+        }
+        .status-pending_review {
+            background: #fef3c7;
+            color: #92400e;
+            border: 1px solid #fde68a;
+        }
+        .status-approved {
+            background: #dcfce7;
+            color: #166534;
+            border: 1px solid #bbf7d0;
+        }
+        .status-rejected {
+            background: #fee2e2;
+            color: #991b1b;
+            border: 1px solid #fecaca;
+        }
+        .gate-checklist {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 16px;
+            margin: 20px 0;
+        }
+        .checklist-item {
+            background: var(--slate-50);
+            border: 1px solid var(--slate-200);
+            border-radius: 8px;
+            padding: 16px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .checklist-icon {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.1rem;
+            flex-shrink: 0;
+        }
+        .icon-ok {
+            background: #dcfce7;
+            color: #166534;
+        }
+        .icon-pending {
+            background: #fef3c7;
+            color: #92400e;
+        }
+        .icon-locked {
+            background: #e2e8f0;
+            color: #64748b;
+        }
+        .icon-rejected {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+    </style>
+</head>
+
+<body>
+
+<header class="navbar">
+    <div class="logo">
+        🚗 K3L <span>RENTALS</span>
+    </div>
+    <nav>
+        <a href="index.html">Home</a>
+        <a href="vehicles.html">Vehicles</a>
+        <a href="kyc.html" class="active" style="color: #60a5fa; font-weight: 600;">ID Verification (KYC)</a>
+        <a href="my-bookings.html">My Bookings</a>
+        <span id="userGreeting" style="font-size: 0.9rem; color: #93c5fd; margin: 0 8px;"></span>
+        <button id="logoutBtn" class="nav-btn">Logout</button>
+    </nav>
+</header>
+
+<div class="kyc-container">
+    <div class="kyc-card">
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 14px; margin-bottom: 20px;">
+            <div>
+                <h1 style="font-size: 1.6rem; color: var(--slate-900); margin: 0 0 6px;">🪪 Identity Verification (KYC)</h1>
+                <p style="color: var(--slate-600); margin: 0; font-size: 0.95rem;">
+                    Admin approval of Aadhaar/PAN and Driving Licence is mandatory before vehicle and date reservations are unlocked.
+                </p>
+            </div>
+            <div id="kycBadgeContainer">
+                <span class="kyc-status-badge status-not_submitted">Checking Status...</span>
+            </div>
+        </div>
+
+        <!-- Verification Checklist State -->
+        <div class="gate-checklist" id="kycChecklist">
+            <div class="checklist-item">
+                <div class="checklist-icon icon-locked" id="iconAadhaar">⏳</div>
+                <div>
+                    <strong style="font-size: 0.9rem; display: block; color: var(--slate-800);">Aadhaar / ID Proof</strong>
+                    <small id="textAadhaar" style="color: var(--slate-500);">Checking...</small>
+                </div>
+            </div>
+            <div class="checklist-item">
+                <div class="checklist-icon icon-locked" id="iconDl">⏳</div>
+                <div>
+                    <strong style="font-size: 0.9rem; display: block; color: var(--slate-800);">Driving Licence (DL)</strong>
+                    <small id="textDl" style="color: var(--slate-500);">Checking...</small>
+                </div>
+            </div>
+            <div class="checklist-item">
+                <div class="checklist-icon icon-locked" id="iconBookingGate">🔒</div>
+                <div>
+                    <strong style="font-size: 0.9rem; display: block; color: var(--slate-800);">Vehicle Reservation</strong>
+                    <small id="textBookingGate" style="color: var(--slate-500);">Locked until Approved</small>
+                </div>
+            </div>
+        </div>
+
+        <!-- Dynamic KYC Notice Callout -->
+        <div id="kycNoticeContainer" style="margin-top: 16px;"></div>
+    </div>
+
+    <!-- KYC Submission / Resubmission Form Card -->
+    <div class="kyc-card" id="kycFormCard" style="display: none;">
+        <h2 style="font-size: 1.3rem; margin-top: 0; margin-bottom: 8px; color: var(--slate-900);">
+            Submit Documents for Admin Verification
+        </h2>
+        <p style="font-size: 0.88rem; color: var(--slate-600); margin-bottom: 20px;">
+            Please upload clear, legible photos or scans. Documents are compressed locally in your browser for secure, private administrative review.
+        </p>
+
+        <form id="kycForm">
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 20px;">
+                <!-- ID Proof -->
+                <div class="form-group">
+                    <label for="kycIdType">1. Primary ID Proof Type *</label>
+                    <select id="kycIdType" required style="padding: 10px; border: 1px solid var(--slate-300); border-radius: 6px; width: 100%;">
+                        <option value="Aadhaar Card">Aadhaar Card (UIDAI)</option>
+                        <option value="PAN Card">PAN Card (Income Tax Dept)</option>
+                    </select>
+
+                    <label for="kycIdFile" style="margin-top: 12px; display: block;">Upload ID Proof Document *</label>
+                    <input type="file" id="kycIdFile" accept="image/*,.pdf" required style="font-size: 0.85rem; width: 100%;">
+                    <small style="color: var(--slate-500); font-size: 0.78rem; display: block; margin-top: 4px;">
+                        JPG, PNG, or WebP. Client compressed to &lt; 80KB.
+                    </small>
+
+                    <div id="kycIdPreview" style="margin-top: 8px; display: none;">
+                        <img src="" alt="ID Preview" style="max-height: 120px; border-radius: 6px; border: 1px solid var(--slate-300); object-fit: contain;">
+                        <span style="font-size: 0.75rem; color: #16a34a; display: block; margin-top: 2px;">✓ ID image compressed ready</span>
+                    </div>
+                </div>
+
+                <!-- Driving Licence -->
+                <div class="form-group">
+                    <label for="kycDlFile">2. Driving Licence (DL) Document *</label>
+                    <input type="file" id="kycDlFile" accept="image/*,.pdf" required style="font-size: 0.85rem; width: 100%; margin-top: 4px;">
+                    <small style="color: var(--slate-500); font-size: 0.78rem; display: block; margin-top: 4px;">
+                        Front side displaying DL number, validity, and non-expired status.
+                    </small>
+
+                    <div id="kycDlPreview" style="margin-top: 8px; display: none;">
+                        <img src="" alt="DL Preview" style="max-height: 120px; border-radius: 6px; border: 1px solid var(--slate-300); object-fit: contain;">
+                        <span style="font-size: 0.75rem; color: #16a34a; display: block; margin-top: 2px;">✓ DL image compressed ready</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Verification Consent -->
+            <div style="margin-top: 20px; padding: 14px; background: var(--slate-50); border: 1px solid var(--slate-200); border-radius: 8px;">
+                <label style="display: flex; align-items: flex-start; gap: 10px; font-size: 0.85rem; color: var(--slate-700); cursor: pointer;">
+                    <input type="checkbox" id="kycConsentCheckbox" required style="margin-top: 3px; width: 16px; height: 16px; cursor: pointer;">
+                    <span>
+                        <strong>Explicit Verification Consent:</strong> I confirm that I am at least 18 years old and hold a genuine, non-expired driving licence. I give explicit consent to K3L Rentals to review my submitted identity document and driving licence solely for identity verification, regulatory compliance under the Motor Vehicles Act, and self-drive rental eligibility.
+                    </span>
+                </label>
+            </div>
+
+            <button type="submit" id="submitKycBtn" class="primary-btn" style="width: 100%; margin-top: 20px; padding: 13px; font-size: 1rem;">
+                Submit Documents for Admin Verification
+            </button>
+        </form>
+
+        <div id="kycFormMessage" style="margin-top: 14px;"></div>
+    </div>
+</div>
+
+<!-- Firebase SDK -->
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+
+<script src="js/firebase-config.js"></script>
+<script src="js/common.js"></script>
+<script src="js/notifications.js"></script>
+<script src="js/chatbot.js"></script>
+<script src="js/kyc.js"></script>
+
+</body>
+</html>

@@ -261,15 +261,20 @@ function renderStepper(b) {
 
 // Render individual booking card
 function renderBookingCard(b) {
-    const total = Number(b.total_amount || 0).toLocaleString("en-IN");
-    const advance = Number(b.advance_amount || Math.round(Number(b.total_amount || 0) * 0.25)).toLocaleString("en-IN");
-    const balance = (Number(b.total_amount || 0) - Number(b.advance_amount || Math.round(Number(b.total_amount || 0) * 0.25))).toLocaleString("en-IN");
+    const totalAmount = Number(b.total_amount || 0);
+    const advanceRequired = Number(b.advance_amount || Math.round(totalAmount * 0.25));
     const status = (b.status || "Pending Review");
     const statusLower = status.toLowerCase();
     const vStatus = b.verification_status || "Pending Review";
     const pStatus = b.payment_status || "Awaiting Approval";
     const category = String(b.category || "car").toLowerCase();
     const icon = category === "bike" ? "🏍️" : "🚗";
+
+    const isAdvancePaid = pStatus === "Paid";
+    const advancePaid = isAdvancePaid ? advanceRequired : 0;
+    const remainingRentalBalance = totalAmount - advancePaid;
+    const damagePenalty = Number(b.damage_penalty || b.return_inspection?.fine_amount || b.return_inspection?.damage_penalty || 0);
+    const totalOutstanding = remainingRentalBalance + damagePenalty;
 
     const isCancellable = statusLower !== "cancelled" && statusLower !== "completed";
 
@@ -294,11 +299,11 @@ function renderBookingCard(b) {
                 <div>
                     <strong style="color: #1e40af; display: block; font-size: 0.95rem;">🎉 Identity Documents Approved!</strong>
                     <p style="color: #1d4ed8; font-size: 0.85rem; margin-top: 2px;">
-                        Pay the mandatory 25% advance (<strong>₹${advance}</strong>) to secure and lock your vehicle reservation.
+                        Pay the mandatory 25% advance (<strong>₹${advanceRequired.toLocaleString("en-IN")}</strong>) to secure and lock your vehicle reservation.
                     </p>
                 </div>
                 <button class="primary-btn" data-action="pay-advance" data-id="${escapeHTML(b.id)}" style="background: #2563eb; padding: 10px 20px; font-size: 0.95rem;">
-                    Pay 25% Advance (₹${advance}) →
+                    Pay 25% Advance (₹${advanceRequired.toLocaleString("en-IN")}) →
                 </button>
             </div>
         `;
@@ -316,7 +321,7 @@ function renderBookingCard(b) {
             <div style="background: #ecfdf5; border: 1px solid #a7f3d0; border-radius: 8px; padding: 12px 14px; margin: 12px 0;">
                 <strong style="color: #065f46; font-size: 0.9rem;">✓ Vehicle Reservation Confirmed!</strong>
                 <p style="color: #047857; font-size: 0.85rem; margin-top: 2px;">
-                    25% advance of ₹${advance} received. Please carry your original Driving Licence and pay remaining balance of ₹${balance} at vehicle pickup.
+                    25% advance of ₹${advanceRequired.toLocaleString("en-IN")} received. Please carry your original Driving Licence and pay remaining rental balance of ₹${remainingRentalBalance.toLocaleString("en-IN")} at vehicle pickup.
                 </p>
             </div>
         `;
@@ -387,25 +392,42 @@ function renderBookingCard(b) {
 
             ${renderStepper(b)}
 
-            <!-- Financial & Date Summary Grid -->
-            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; background: var(--surface-alt); padding: 14px; border-radius: 8px; border: 1px solid var(--slate-200); font-size: 0.88rem;">
-                <div>
-                    <span style="color: var(--slate-500); display: block; font-size: 0.78rem;">Rental Period:</span>
-                    <strong>${escapeHTML(b.start_date || "")} → ${escapeHTML(b.end_date || "")}</strong>
-                    <small style="display: block; color: var(--slate-600);">(${b.rental_days || 1} days)</small>
+            <!-- Distinct 5-Point Financial & Period Summary Grid -->
+            <div style="background: var(--surface-alt); padding: 16px; border-radius: 10px; border: 1px solid var(--slate-200); margin: 14px 0;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; border-bottom: 1px solid var(--slate-200); padding-bottom: 8px;">
+                    <span style="font-size: 0.85rem; color: var(--slate-600); font-weight: 600;">
+                        📅 Rental Period: <strong>${escapeHTML(b.start_date || "")} → ${escapeHTML(b.end_date || "")}</strong> (${b.rental_days || 1} days @ ₹${Number(b.price_per_day || 0).toLocaleString("en-IN")}/day)
+                    </span>
+                    <span style="font-size: 0.8rem; background: var(--slate-200); padding: 2px 8px; border-radius: 4px;">
+                        ${isAdvancePaid ? '✓ Advance Settled' : 'Advance Pending'}
+                    </span>
                 </div>
-                <div>
-                    <span style="color: var(--slate-500); display: block; font-size: 0.78rem;">Total Rental:</span>
-                    <strong>₹${total}</strong>
-                </div>
-                <div>
-                    <span style="color: var(--slate-500); display: block; font-size: 0.78rem;">25% Advance:</span>
-                    <strong style="color: #2563eb;">₹${advance}</strong>
-                    <small style="display: block; color: var(--slate-600);">${pStatus === 'Paid' ? '✓ Paid' : 'Due'}</small>
-                </div>
-                <div>
-                    <span style="color: var(--slate-500); display: block; font-size: 0.78rem;">75% Due at Pickup:</span>
-                    <strong>₹${balance}</strong>
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 12px; font-size: 0.86rem;">
+                    <div>
+                        <span style="color: var(--slate-500); display: block; font-size: 0.74rem; text-transform: uppercase;">1. Total Rental</span>
+                        <strong style="color: var(--slate-900); font-size: 0.95rem;">₹${totalAmount.toLocaleString("en-IN")}</strong>
+                        <small style="display: block; color: var(--slate-500); font-size: 0.72rem;">Full rental charge</small>
+                    </div>
+                    <div>
+                        <span style="color: var(--slate-500); display: block; font-size: 0.74rem; text-transform: uppercase;">2. 25% Advance</span>
+                        <strong style="color: ${isAdvancePaid ? '#16a34a' : '#2563eb'}; font-size: 0.95rem;">₹${advancePaid.toLocaleString("en-IN")}</strong>
+                        <small style="display: block; color: ${isAdvancePaid ? '#16a34a' : '#2563eb'}; font-size: 0.72rem;">${isAdvancePaid ? '✓ Paid' : `Due: ₹${advanceRequired.toLocaleString("en-IN")}`}</small>
+                    </div>
+                    <div>
+                        <span style="color: var(--slate-500); display: block; font-size: 0.74rem; text-transform: uppercase;">3. 75% Balance</span>
+                        <strong style="color: var(--slate-900); font-size: 0.95rem;">₹${remainingRentalBalance.toLocaleString("en-IN")}</strong>
+                        <small style="display: block; color: var(--slate-500); font-size: 0.72rem;">Due at pickup</small>
+                    </div>
+                    <div>
+                        <span style="color: var(--slate-500); display: block; font-size: 0.74rem; text-transform: uppercase;">4. Damage Penalty</span>
+                        <strong style="color: ${damagePenalty > 0 ? '#dc2626' : 'var(--slate-700)'}; font-size: 0.95rem;">₹${damagePenalty.toLocaleString("en-IN")}</strong>
+                        <small style="display: block; color: ${damagePenalty > 0 ? '#dc2626' : 'var(--slate-500)'}; font-size: 0.72rem;">${damagePenalty > 0 ? 'Assessed fine' : 'Nil (₹0)'}</small>
+                    </div>
+                    <div style="background: #f1f5f9; padding: 6px 10px; border-radius: 6px; border: 1px solid #e2e8f0;">
+                        <span style="color: #0f172a; display: block; font-size: 0.74rem; text-transform: uppercase; font-weight: 700;">5. Net Outstanding</span>
+                        <strong style="color: #0f172a; font-size: 1.05rem;">₹${totalOutstanding.toLocaleString("en-IN")}</strong>
+                        <small style="display: block; color: #475569; font-size: 0.72rem;">Amount payable</small>
+                    </div>
                 </div>
             </div>
 
@@ -458,8 +480,10 @@ function openPaymentModal(booking) {
         </div>
     `;
 
-    // Generate UPI QR URI:
-    const upiUri = `upi://pay?pa=k3lrentals@oksbi&pn=K3L+Rentals&am=${advance}&tn=Booking-${booking.id.substring(0, 8)}&cu=INR`;
+    // Generate UPI QR URI for configured receiving account (Ms Krishma Priya S / K3L Rentals):
+    const receivingUpi = "9486886986@ybl";
+    const payeeName = "Ms Krishma Priya S";
+    const upiUri = `upi://pay?pa=${receivingUpi}&pn=${encodeURIComponent(payeeName)}&am=${advance}&tn=K3L-Rental-${booking.id.substring(0, 8)}&cu=INR`;
     upiQrImage.src = `https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(upiUri)}`;
 
     paymentModal.style.display = "flex";
@@ -475,7 +499,7 @@ if (closePaymentModal) {
 // Copy UPI ID button
 if (copyUpiBtn) {
     copyUpiBtn.addEventListener("click", () => {
-        navigator.clipboard.writeText("k3lrentals@oksbi").then(() => {
+        navigator.clipboard.writeText("9486886986@ybl").then(() => {
             copyUpiBtn.textContent = "Copied!";
             setTimeout(() => { copyUpiBtn.textContent = "Copy"; }, 2000);
         });
@@ -805,9 +829,13 @@ function openCustomerReceiptModal(b) {
     if (!modal || !area) return;
 
     const total = Number(b.total_amount || 0);
-    const advance = Number(b.advance_amount || Math.round(total * 0.25));
-    const balance = total - advance;
+    const advanceRequired = Number(b.advance_amount || Math.round(total * 0.25));
     const pStatus = b.payment_status || "Awaiting Verification";
+    const isPaid = pStatus === "Paid";
+    const advancePaid = isPaid ? advanceRequired : 0;
+    const remainingRentalBalance = total - advancePaid;
+    const damagePenalty = Number(b.damage_penalty || b.return_inspection?.fine_amount || b.return_inspection?.damage_penalty || 0);
+    const totalOutstanding = remainingRentalBalance + damagePenalty;
 
     area.innerHTML = `
         <div style="border: 2px solid #0f172a; padding: 24px; border-radius: 8px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
@@ -823,7 +851,7 @@ function openCustomerReceiptModal(b) {
                 </div>
                 <div style="text-align: right;">
                     <span style="display: inline-block; background: #0f172a; color: white; padding: 4px 10px; font-size: 0.75rem; font-weight: 700; border-radius: 4px; text-transform: uppercase;">
-                        ${pStatus === 'Paid' ? 'CONFIRMED BOOKING' : 'BOOKING RECEIPT'}
+                        ${isPaid ? 'CONFIRMED BOOKING' : 'BOOKING RECEIPT'}
                     </span>
                     <p style="font-size: 0.8rem; color: #64748b; margin-top: 6px;">
                         Date: ${new Date().toLocaleDateString("en-IN")}<br>
@@ -850,41 +878,49 @@ function openCustomerReceiptModal(b) {
                 </div>
             </div>
 
-            <!-- Financial Table -->
+            <!-- Distinct 5-Point Financial Table -->
             <table style="width: 100%; border-collapse: collapse; margin-bottom: 18px; font-size: 0.88rem;">
                 <thead>
                     <tr style="background: #e2e8f0; text-align: left;">
-                        <th style="padding: 8px 10px; border: 1px solid #cbd5e1;">Description</th>
-                        <th style="padding: 8px 10px; border: 1px solid #cbd5e1; text-align: center;">Rate / Day</th>
-                        <th style="padding: 8px 10px; border: 1px solid #cbd5e1; text-align: center;">Days</th>
+                        <th style="padding: 8px 10px; border: 1px solid #cbd5e1;">Financial Item</th>
+                        <th style="padding: 8px 10px; border: 1px solid #cbd5e1; text-align: center;">Rate / Basis</th>
+                        <th style="padding: 8px 10px; border: 1px solid #cbd5e1; text-align: center;">Qty / Notes</th>
                         <th style="padding: 8px 10px; border: 1px solid #cbd5e1; text-align: right;">Amount (INR)</th>
                     </tr>
                 </thead>
                 <tbody>
                     <tr>
-                        <td style="padding: 8px 10px; border: 1px solid #e2e8f0;">Self-Drive Vehicle Rental Fee</td>
-                        <td style="padding: 8px 10px; border: 1px solid #e2e8f0; text-align: center;">₹${Number(b.price_per_day || 0).toLocaleString("en-IN")}</td>
-                        <td style="padding: 8px 10px; border: 1px solid #e2e8f0; text-align: center;">${b.rental_days || 1}</td>
-                        <td style="padding: 8px 10px; border: 1px solid #e2e8f0; text-align: right;">₹${total.toLocaleString("en-IN")}</td>
+                        <td style="padding: 8px 10px; border: 1px solid #e2e8f0;">1. Total Rental Charge</td>
+                        <td style="padding: 8px 10px; border: 1px solid #e2e8f0; text-align: center;">₹${Number(b.price_per_day || 0).toLocaleString("en-IN")}/day</td>
+                        <td style="padding: 8px 10px; border: 1px solid #e2e8f0; text-align: center;">${b.rental_days || 1} days</td>
+                        <td style="padding: 8px 10px; border: 1px solid #e2e8f0; text-align: right; font-weight: 600;">₹${total.toLocaleString("en-IN")}</td>
                     </tr>
-                    <tr style="font-weight: 600; background: #f8fafc;">
-                        <td colspan="3" style="padding: 8px 10px; border: 1px solid #e2e8f0; text-align: right;">Total Rental Charge:</td>
-                        <td style="padding: 8px 10px; border: 1px solid #e2e8f0; text-align: right;">₹${total.toLocaleString("en-IN")}</td>
-                    </tr>
-                    <tr style="color: #166534; font-weight: 600;">
-                        <td colspan="3" style="padding: 8px 10px; border: 1px solid #e2e8f0; text-align: right;">
-                            25% Advance Payment (UPI UTR: ${escapeHTML(b.utr_number || "Verified")}):
-                        </td>
-                        <td style="padding: 8px 10px; border: 1px solid #e2e8f0; text-align: right;">
-                            - ₹${advance.toLocaleString("en-IN")}
+                    <tr style="color: ${isPaid ? '#166534' : '#2563eb'};">
+                        <td style="padding: 8px 10px; border: 1px solid #e2e8f0;">2. 25% Advance Paid via UPI</td>
+                        <td style="padding: 8px 10px; border: 1px solid #e2e8f0; text-align: center;">25% of Total</td>
+                        <td style="padding: 8px 10px; border: 1px solid #e2e8f0; text-align: center;">${isPaid ? `UTR: ${escapeHTML(b.utr_number || "Verified")}` : 'Due before pickup'}</td>
+                        <td style="padding: 8px 10px; border: 1px solid #e2e8f0; text-align: right; font-weight: 600;">
+                            ${isPaid ? `- ₹${advancePaid.toLocaleString("en-IN")}` : `₹0 (Due: ₹${advanceRequired.toLocaleString("en-IN")})`}
                         </td>
                     </tr>
-                    <tr style="font-weight: 700; font-size: 0.95rem; background: #eff6ff;">
+                    <tr style="background: #f8fafc;">
+                        <td style="padding: 8px 10px; border: 1px solid #e2e8f0;">3. Remaining 75% Rental Balance</td>
+                        <td style="padding: 8px 10px; border: 1px solid #e2e8f0; text-align: center;">75% of Total</td>
+                        <td style="padding: 8px 10px; border: 1px solid #e2e8f0; text-align: center;">Payable at pickup</td>
+                        <td style="padding: 8px 10px; border: 1px solid #e2e8f0; text-align: right; font-weight: 600;">₹${remainingRentalBalance.toLocaleString("en-IN")}</td>
+                    </tr>
+                    <tr style="color: ${damagePenalty > 0 ? '#dc2626' : '#64748b'};">
+                        <td style="padding: 8px 10px; border: 1px solid #e2e8f0;">4. Approved Damage Penalty</td>
+                        <td style="padding: 8px 10px; border: 1px solid #e2e8f0; text-align: center;">Post-Trip Inspection</td>
+                        <td style="padding: 8px 10px; border: 1px solid #e2e8f0; text-align: center;">${damagePenalty > 0 ? 'Assessed fine' : 'Nil (₹0)'}</td>
+                        <td style="padding: 8px 10px; border: 1px solid #e2e8f0; text-align: right; font-weight: 600;">+ ₹${damagePenalty.toLocaleString("en-IN")}</td>
+                    </tr>
+                    <tr style="font-weight: 700; font-size: 1rem; background: #eff6ff;">
                         <td colspan="3" style="padding: 10px; border: 1px solid #bfdbfe; text-align: right; color: #1e40af;">
-                            Remaining Balance Due at Vehicle Pickup:
+                            5. Total Outstanding Net Balance:
                         </td>
                         <td style="padding: 10px; border: 1px solid #bfdbfe; text-align: right; color: #1e40af;">
-                            ₹${balance.toLocaleString("en-IN")}
+                            ₹${totalOutstanding.toLocaleString("en-IN")}
                         </td>
                     </tr>
                 </tbody>

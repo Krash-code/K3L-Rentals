@@ -168,6 +168,148 @@ async function verifyEmailGate(user) {
     }
 }
 
+// Check KYC verification gate
+async function checkKycGate(user) {
+    const kycGateCard = document.getElementById("kycGateCard");
+    if (!user) return false;
+
+    try {
+        const uDoc = await db.collection("users").doc(user.uid).get();
+        customerProfile = uDoc.exists ? uDoc.data() : {};
+        const kycStatus = customerProfile.kyc_status || "Not Submitted";
+        const idType = customerProfile.id_type || "Aadhaar Card";
+
+        if (kycStatus === "Approved") {
+            if (kycGateCard) {
+                kycGateCard.style.display = "block";
+                kycGateCard.innerHTML = `
+                    <div style="background: #ecfdf5; border: 1px solid #a7f3d0; border-radius: 8px; padding: 14px 18px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+                        <div>
+                            <strong style="color: #065f46; font-size: 1rem;">✓ Identity Verified: Both ${escapeHTML(idType)} &amp; Driving Licence Approved</strong>
+                            <p style="color: #047857; font-size: 0.85rem; margin-top: 2px;">Your verified documents are linked to your profile. Select rental dates below to reserve.</p>
+                        </div>
+                        <a href="kyc.html" style="color: #065f46; font-size: 0.85rem; text-decoration: underline; font-weight: 600;">View KYC Profile →</a>
+                    </div>
+                `;
+            }
+
+            // Pre-populate document cache from approved profile
+            if (customerProfile.id_document) compressedIdDoc = customerProfile.id_document;
+            if (customerProfile.dl_document) compressedDlDoc = customerProfile.dl_document;
+
+            // Update document section UI to show pre-verified status
+            const docSection = document.getElementById("docSectionContainer");
+            if (docSection) {
+                docSection.innerHTML = `
+                    <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 16px;">
+                        <div style="display: flex; align-items: center; gap: 8px; color: #166534; font-weight: 600;">
+                            <span>✓</span>
+                            <span>Verified KYC Documents Automatically Attached</span>
+                        </div>
+                        <p style="font-size: 0.85rem; color: #15803d; margin: 4px 0 10px;">
+                            ${escapeHTML(idType)} and Driving Licence approved by K3L Admin. No document re-upload required.
+                        </p>
+                        <div style="padding-top: 10px; border-top: 1px dashed #bbf7d0;">
+                            <label style="display: flex; align-items: flex-start; gap: 10px; font-size: 0.85rem; color: #166534; cursor: pointer;">
+                                <input type="checkbox" id="consentCheckbox" required checked style="margin-top: 3px; width: 16px; height: 16px; cursor: pointer;">
+                                <span>
+                                    <strong>Driver Declaration:</strong> I confirm I am 18+ years old and hold a valid, non-expired driving licence. I agree to K3L Rentals terms and conditions.
+                                </span>
+                            </label>
+                        </div>
+                    </div>
+                `;
+            }
+
+            if (bookingForm) {
+                bookingForm.style.display = "block";
+                const sDate = document.getElementById("start_date");
+                const eDate = document.getElementById("end_date");
+                if (sDate) sDate.disabled = false;
+                if (eDate) eDate.disabled = false;
+                if (submitBookingBtn) submitBookingBtn.disabled = false;
+            }
+            return true;
+
+        } else if (kycStatus === "Pending Review") {
+            if (kycGateCard) {
+                kycGateCard.style.display = "block";
+                kycGateCard.innerHTML = `
+                    <div style="background: #fffbeb; border: 1px solid #fde68a; border-radius: 8px; padding: 18px;">
+                        <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 10px;">
+                            <div>
+                                <span style="background: #fef3c7; color: #92400e; padding: 3px 10px; border-radius: 20px; font-size: 0.82rem; font-weight: 700; text-transform: uppercase;">
+                                    ⏳ Verification Pending Review
+                                </span>
+                                <h3 style="color: #92400e; margin: 8px 0 6px;">Vehicle Reservation &amp; Dates Locked</h3>
+                                <p style="color: #78350f; font-size: 0.9rem; margin: 0 0 12px; line-height: 1.5;">
+                                    Your identity documents (${escapeHTML(idType)} and Driving Licence) have been submitted and are in our verification queue. Date selection and reservation will unlock automatically once approved by K3L Admin.
+                                </p>
+                            </div>
+                        </div>
+                        <a href="kyc.html" class="secondary-btn" style="display: inline-block; padding: 8px 18px; font-size: 0.88rem;">
+                            View Verification Queue Status →
+                        </a>
+                    </div>
+                `;
+            }
+            if (bookingForm) bookingForm.style.display = "none";
+            return false;
+
+        } else if (kycStatus === "Rejected") {
+            const reason = customerProfile.kyc_rejection_reason || "Documents could not be verified.";
+            if (kycGateCard) {
+                kycGateCard.style.display = "block";
+                kycGateCard.innerHTML = `
+                    <div style="background: #fef2f2; border: 1px solid #fecaca; border-radius: 8px; padding: 18px;">
+                        <span style="background: #fee2e2; color: #991b1b; padding: 3px 10px; border-radius: 20px; font-size: 0.82rem; font-weight: 700; text-transform: uppercase;">
+                            ⚠️ Verification Not Approved
+                        </span>
+                        <h3 style="color: #991b1b; margin: 8px 0 6px;">Vehicle Reservation Locked</h3>
+                        <p style="color: #b91c1c; font-size: 0.9rem; margin: 0 0 6px;">
+                            <strong>Admin Reason:</strong> "${escapeHTML(reason)}"
+                        </p>
+                        <p style="color: #7f1d1d; font-size: 0.85rem; margin: 0 0 14px;">
+                            Please upload corrected documents on the KYC portal to unlock vehicle booking.
+                        </p>
+                        <a href="kyc.html" class="primary-btn" style="display: inline-block; padding: 8px 18px; font-size: 0.88rem;">
+                            Resubmit Documents on KYC Portal →
+                        </a>
+                    </div>
+                `;
+            }
+            if (bookingForm) bookingForm.style.display = "none";
+            return false;
+
+        } else {
+            // Not Submitted
+            if (kycGateCard) {
+                kycGateCard.style.display = "block";
+                kycGateCard.innerHTML = `
+                    <div style="background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px; padding: 18px;">
+                        <span style="background: #dbeafe; color: #1e40af; padding: 3px 10px; border-radius: 20px; font-size: 0.82rem; font-weight: 700; text-transform: uppercase;">
+                            🔒 Verification Required
+                        </span>
+                        <h3 style="color: #1e40af; margin: 8px 0 6px;">Identity Verification Required to Book</h3>
+                        <p style="color: #1e3a8a; font-size: 0.9rem; margin: 0 0 14px; line-height: 1.5;">
+                            Under Motor Vehicles Act regulations and K3L Rentals policy, drivers must complete a one-time identity verification (Aadhaar/PAN + Driving Licence) before selecting rental dates.
+                        </p>
+                        <a href="kyc.html" class="primary-btn" style="display: inline-block; padding: 10px 20px; font-size: 0.92rem;">
+                            Complete Identity Verification (KYC) Now →
+                        </a>
+                    </div>
+                `;
+            }
+            if (bookingForm) bookingForm.style.display = "none";
+            return false;
+        }
+
+    } catch (err) {
+        console.error("KYC gate check error:", err);
+        return false;
+    }
+}
+
 // Load selected vehicle details and its confirmed schedules
 async function loadVehicle() {
     if (!vehicleId) {
@@ -261,10 +403,12 @@ async function loadVehicle() {
                 </div>
             `;
             if (bookingForm) bookingForm.style.display = "none";
+            const kycGateCard = document.getElementById("kycGateCard");
+            if (kycGateCard) kycGateCard.style.display = "none";
         } else {
             const isEmailOk = await verifyEmailGate(auth.currentUser);
             if (isEmailOk) {
-                if (bookingForm) bookingForm.style.display = "block";
+                await checkKycGate(auth.currentUser);
             }
             setMinDateLimits();
         }
@@ -470,14 +614,19 @@ if (bookingForm) {
             return;
         }
 
+        const isApprovedKyc = customerProfile && customerProfile.kyc_status === "Approved";
+        const finalIdDoc = compressedIdDoc || (isApprovedKyc ? customerProfile.id_document : null);
+        const finalDlDoc = compressedDlDoc || (isApprovedKyc ? customerProfile.dl_document : null);
+        const finalIdType = (customerProfile && customerProfile.id_type) || idType || "Aadhaar Card";
+
         // Validate document uploads
-        if (!compressedIdDoc) {
-            showBookingError(`Please upload a clear copy of your ${idType}.`);
+        if (!finalIdDoc) {
+            showBookingError(`Please upload or verify your ${finalIdType} on the KYC portal.`);
             return;
         }
 
-        if (!compressedDlDoc) {
-            showBookingError("Please upload a clear copy of your Driving Licence (DL).");
+        if (!finalDlDoc) {
+            showBookingError("Please upload or verify your Driving Licence (DL) on the KYC portal.");
             return;
         }
 
@@ -540,6 +689,10 @@ if (bookingForm) {
             const newBookingRef = db.collection("bookings").doc();
             const bookingId = newBookingRef.id;
 
+            const vStatus = isApprovedKyc ? "Approved" : "Pending Review";
+            const pStatus = isApprovedKyc ? "Awaiting Advance" : "Awaiting Approval";
+            const bStatus = isApprovedKyc ? "Awaiting Advance" : "Pending Review";
+
             const bookingPayload = {
                 userId: user.uid,
                 customerName: user.displayName || user.email.split("@")[0],
@@ -558,20 +711,21 @@ if (bookingForm) {
                 total_amount: totalAmount,
                 advance_amount: advanceAmount,
                 balance_amount: balanceAmount,
-                id_type: idType,
-                id_document: compressedIdDoc,
-                dl_document: compressedDlDoc,
+                id_type: finalIdType,
+                id_document: finalIdDoc,
+                dl_document: finalDlDoc,
+                kyc_verified: !!isApprovedKyc,
                 consent_accepted: true,
                 consent_timestamp: firebase.firestore.FieldValue.serverTimestamp(),
-                verification_status: "Pending Review",
-                payment_status: "Awaiting Approval",
-                status: "Pending Review",
+                verification_status: vStatus,
+                payment_status: pStatus,
+                status: bStatus,
                 createdAt: firebase.firestore.FieldValue.serverTimestamp()
             };
 
             await newBookingRef.set(bookingPayload);
 
-            // Also create a pending schedule reservation in the vehicle's subcollection
+            // Also create schedule reservation in the vehicle's subcollection
             await db.collection("vehicles")
                 .doc(vehicleId)
                 .collection("schedules")
@@ -580,14 +734,16 @@ if (bookingForm) {
                     userId: user.uid,
                     start_date: startDate,
                     end_date: endDate,
-                    status: "Pending Review",
+                    status: bStatus,
                     createdAt: firebase.firestore.FieldValue.serverTimestamp()
                 });
 
             // Write in-app notification to customer
             await db.collection("users").doc(user.uid).collection("notifications").add({
-                title: "Booking Request Submitted",
-                message: `Your booking request for ${selectedVehicle.model} (${startDate} to ${endDate}) has been submitted for manual document review.`,
+                title: isApprovedKyc ? "Booking Created - Advance Due" : "Booking Request Submitted",
+                message: isApprovedKyc
+                    ? `Your booking for ${selectedVehicle.model} is ready. Pay the 25% advance (₹${advanceAmount.toLocaleString("en-IN")}) to lock your dates.`
+                    : `Your booking request for ${selectedVehicle.model} (${startDate} to ${endDate}) has been submitted for manual document review.`,
                 type: "booking",
                 bookingId: bookingId,
                 read: false,
@@ -596,7 +752,7 @@ if (bookingForm) {
 
             bookingMessage.innerHTML = `
                 <div class="info-card" style="border-left: 4px solid #2563eb; background: #f8fafc; padding: 20px;">
-                    <h3 style="color:#1d4ed8; margin-top:0;">📋 Booking Request Submitted for Review!</h3>
+                    <h3 style="color:#1d4ed8; margin-top:0;">📋 Booking Request ${isApprovedKyc ? 'Logged &amp; Ready for Advance Payment!' : 'Submitted for Review!'}</h3>
                     <p style="font-size: 0.95rem; line-height: 1.6;">
                         Your reservation request for <strong>${escapeHTML(selectedVehicle.model)} (${escapeHTML(selectedVehicle.vehicle_number)})</strong> has been logged.
                     </p>
@@ -605,20 +761,26 @@ if (bookingForm) {
                         <p><strong>Rental Duration:</strong> ${rentalDays} days (${escapeHTML(startDate)} → ${escapeHTML(endDate)})</p>
                         <p><strong>Total Rental:</strong> ₹${totalAmount.toLocaleString("en-IN")}</p>
                         <p><strong>25% Advance to Pay:</strong> <strong style="color: #2563eb;">₹${advanceAmount.toLocaleString("en-IN")}</strong></p>
-                        <p><strong>Current Status:</strong> <span class="admin-status pending_review">Pending Review</span></p>
+                        <p><strong>Current Status:</strong> <span class="admin-status ${bStatus.toLowerCase().replace(/[\s-]/g, '_')}">${escapeHTML(bStatus)}</span></p>
                     </div>
 
                     <div style="background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 6px; padding: 12px; margin-bottom: 16px; font-size: 0.85rem; color: #1e40af;">
                         <strong>Next Steps:</strong>
                         <ol style="margin-left: 18px; margin-top: 4px;">
-                            <li>Our administrative team will review your ${idType} and Driving Licence.</li>
-                            <li>Once approved, you will receive an in-app notice to complete the 25% advance payment (₹${advanceAmount.toLocaleString("en-IN")}).</li>
-                            <li>After your advance payment is verified, your vehicle lock is confirmed!</li>
+                            ${isApprovedKyc ? `
+                                <li>Your driver identity documents are already verified and approved!</li>
+                                <li>Pay the mandatory 25% advance (<strong>₹${advanceAmount.toLocaleString("en-IN")}</strong>) to confirm and lock your vehicle schedule.</li>
+                                <li>After admin confirms your payment UTR, vehicle reservation is 100% locked!</li>
+                            ` : `
+                                <li>Our administrative team will review your ${finalIdType} and Driving Licence.</li>
+                                <li>Once approved, you will receive an in-app notice to complete the 25% advance payment (₹${advanceAmount.toLocaleString("en-IN")}).</li>
+                                <li>After your advance payment is verified, your vehicle lock is confirmed!</li>
+                            `}
                         </ol>
                     </div>
 
                     <a href="my-bookings.html" class="primary-btn" style="display:inline-block; padding: 10px 20px; text-decoration: none;">
-                        Track in My Bookings →
+                        ${isApprovedKyc ? 'Pay 25% Advance in My Bookings →' : 'Track in My Bookings →'}
                     </a>
                 </div>
             `;

@@ -17,6 +17,7 @@
     <nav>
         <a href="index.html">Home</a>
         <a href="vehicles.html">Vehicles</a>
+        <a href="kyc.html" id="kycLink">ID Verification (KYC)</a>
         <a href="my-bookings.html" id="bookingsLink">My Bookings</a>
         <span id="userGreeting" style="font-size: 0.9rem; color: #93c5fd; margin: 0 8px;"></span>
         <button id="logoutBtn" class="nav-btn">Logout</button>
@@ -65,6 +66,9 @@
             <p>Loading vehicle information...</p>
         </div>
 
+        <!-- Dedicated KYC Access Gate Banner -->
+        <div id="kycGateCard" style="display: none; margin: 20px 0;"></div>
+
         <!-- Booking & Document Form -->
         <form id="bookingForm" style="display: none; margin-top: 24px;">
 
@@ -84,7 +88,7 @@
             <div id="priceEstimate" style="margin: 16px 0;"></div>
 
             <!-- Document Upload Section -->
-            <div style="background: var(--surface-alt); border: 1px solid var(--slate-200); border-radius: var(--radius-md); padding: 20px; margin: 20px 0;">
+            <div id="docSectionContainer" style="background: var(--surface-alt); border: 1px solid var(--slate-200); border-radius: var(--radius-md); padding: 20px; margin: 20px 0;">
                 <h3 style="font-size: 1.1rem; color: var(--slate-900); margin-bottom: 6px;">
                     🪪 Identity &amp; Driving Licence Verification
                 </h3>

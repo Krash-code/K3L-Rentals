@@ -4,8 +4,9 @@ var db = window.db || (typeof firebase !== "undefined" ? firebase.firestore() : 
 
 let currentAdmin = null;
 let allBookings = [];
+let allKycUsers = [];
 let activeTab = "pending-docs";
-let activeModalBooking = null;
+let activeModalItem = null; // { type: 'booking' | 'user', data: object }
 
 const listContainer = document.getElementById("verificationListContainer");
 const actionStatusMsg = document.getElementById("actionStatusMessage");
@@ -44,17 +45,28 @@ async function checkAdminAccess(user) {
     }
 }
 
-// Load all bookings from Firestore
+// Load all bookings and pending KYC users from Firestore
 async function loadVerificationBookings() {
     if (!listContainer) return;
     listContainer.innerHTML = "<p>Loading records...</p>";
 
     try {
-        const snapshot = await db.collection("bookings").get();
-        allBookings = snapshot.docs.map(doc => ({
+        const [bookingsSnap, usersSnap] = await Promise.all([
+            db.collection("bookings").get(),
+            db.collection("users").where("kyc_status", "==", "Pending Review").get().catch(e => {
+                console.warn("Could not query pending kyc users by index:", e);
+                return db.collection("users").get();
+            })
+        ]);
+
+        allBookings = bookingsSnap.docs.map(doc => ({
             id: doc.id,
             ...doc.data()
         }));
+
+        allKycUsers = usersSnap.docs
+            .map(doc => ({ id: doc.id, ...doc.data() }))
+            .filter(u => u.kyc_status === "Pending Review");
 
         // Sort latest first
         allBookings.sort((a, b) => {
@@ -68,18 +80,19 @@ async function loadVerificationBookings() {
 
     } catch (err) {
         console.error("Load bookings error:", err);
-        listContainer.innerHTML = `<div class="info-card"><h3>Could not load bookings</h3><p>${escapeHTML(err.message)}</p></div>`;
+        listContainer.innerHTML = `<div class="info-card"><h3>Could not load verification records</h3><p>${escapeHTML(err.message)}</p></div>`;
     }
 }
 
 // Update badges on tabs
 function updateTabCounters() {
-    const pendingDocs = allBookings.filter(b => b.verification_status === "Pending Review" || (b.status === "Pending Review" && b.verification_status !== "Approved"));
+    const pendingBookingDocs = allBookings.filter(b => b.verification_status === "Pending Review" || (b.status === "Pending Review" && b.verification_status !== "Approved"));
+    const pendingDocsTotal = allKycUsers.length + pendingBookingDocs.length;
     const pendingPayments = allBookings.filter(b => b.payment_status === "Pending Verification");
     const confirmed = allBookings.filter(b => b.status === "Confirmed" || b.status === "Active");
     const rejected = allBookings.filter(b => b.verification_status === "Rejected" || b.status === "Rejected");
 
-    document.getElementById("pendingDocsCount").textContent = pendingDocs.length;
+    document.getElementById("pendingDocsCount").textContent = pendingDocsTotal;
     document.getElementById("pendingPaymentsCount").textContent = pendingPayments.length;
     document.getElementById("confirmedCount").textContent = confirmed.length;
     document.getElementById("rejectedCount").textContent = rejected.length;
@@ -89,10 +102,64 @@ function updateTabCounters() {
 function renderTabContent() {
     if (!listContainer) return;
 
-    let filtered = [];
     if (activeTab === "pending-docs") {
-        filtered = allBookings.filter(b => b.verification_status === "Pending Review" || (b.status === "Pending Review" && b.verification_status !== "Approved"));
-    } else if (activeTab === "pending-payments") {
+        const pendingBookingDocs = allBookings.filter(b => b.verification_status === "Pending Review" || (b.status === "Pending Review" && b.verification_status !== "Approved"));
+
+        if (allKycUsers.length === 0 && pendingBookingDocs.length === 0) {
+            listContainer.innerHTML = `
+                <div class="info-card" style="text-align: center; padding: 40px 20px;">
+                    <h3>All Documents Verified</h3>
+                    <p style="color: var(--slate-500); margin-top: 6px;">
+                        There are currently no customer account KYC submissions or booking document reviews pending!
+                    </p>
+                </div>
+            `;
+            return;
+        }
+
+        let html = "";
+
+        // Section 1: Customer Account KYC Profile Submissions
+        if (allKycUsers.length > 0) {
+            html += `
+                <div style="margin-bottom: 24px;">
+                    <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 12px;">
+                        <span style="font-size: 1.2rem;">🪪</span>
+                        <h2 style="font-size: 1.15rem; margin: 0; color: #1e3a8a;">
+                            Customer Account KYC Verifications (${allKycUsers.length} Pending)
+                        </h2>
+                    </div>
+                    <div style="display: flex; flex-direction: column; gap: 14px;">
+                        ${allKycUsers.map(u => renderUserKycCard(u)).join("")}
+                    </div>
+                </div>
+            `;
+        }
+
+        // Section 2: Booking Document Submissions
+        if (pendingBookingDocs.length > 0) {
+            html += `
+                <div>
+                    <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 12px;">
+                        <span style="font-size: 1.2rem;">📋</span>
+                        <h2 style="font-size: 1.15rem; margin: 0; color: #1e3a8a;">
+                            Booking Document Submissions (${pendingBookingDocs.length} Pending)
+                        </h2>
+                    </div>
+                    <div style="display: flex; flex-direction: column; gap: 14px;">
+                        ${pendingBookingDocs.map(b => renderBookingCard(b)).join("")}
+                    </div>
+                </div>
+            `;
+        }
+
+        listContainer.innerHTML = html;
+        attachButtonListeners();
+        return;
+    }
+
+    let filtered = [];
+    if (activeTab === "pending-payments") {
         filtered = allBookings.filter(b => b.payment_status === "Pending Verification");
     } else if (activeTab === "confirmed-tab") {
         filtered = allBookings.filter(b => b.status === "Confirmed" || b.status === "Active");
@@ -105,36 +172,98 @@ function renderTabContent() {
             <div class="info-card" style="text-align: center; padding: 40px 20px;">
                 <h3>No records found in this section</h3>
                 <p style="color: var(--slate-500); margin-top: 6px;">
-                    ${activeTab === "pending-docs" ? "All customer document verification requests have been processed!" : "No items to display."}
+                    ${activeTab === "pending-payments" ? "No advance payment references pending verification." : "No items to display."}
                 </p>
             </div>
         `;
         return;
     }
 
+    // If pending payments tab, add instructional banner
+    let paymentBanner = "";
+    if (activeTab === "pending-payments") {
+        paymentBanner = `
+            <div style="background: #fffbeb; border: 1px solid #fde68a; border-radius: 8px; padding: 14px 18px; margin-bottom: 16px; font-size: 0.88rem; color: #92400e; display: flex; align-items: flex-start; gap: 12px;">
+                <span style="font-size: 1.3rem;">💡</span>
+                <div>
+                    <strong>Advance Payment Verification Protocol:</strong>
+                    <div style="margin-top: 2px;">
+                        Verify receipt of the exact 25% advance amount in your UPI app for <strong>9486886986@ybl</strong> (Payee: <strong>Ms Krishma Priya S</strong> / K3L Rentals). Match the customer's reported transaction UTR reference before confirming.
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+
     listContainer.innerHTML = `
+        ${paymentBanner}
         <div style="display: flex; flex-direction: column; gap: 16px;">
             ${filtered.map(booking => renderBookingCard(booking)).join("")}
         </div>
     `;
 
-    // Attach button listeners
+    attachButtonListeners();
+}
+
+function attachButtonListeners() {
     listContainer.querySelectorAll("button[data-action]").forEach(btn => {
         btn.addEventListener("click", function () {
             const action = this.dataset.action;
-            const bookingId = this.dataset.id;
-            const booking = allBookings.find(b => b.id === bookingId);
-            if (!booking) return;
+            const id = this.dataset.id;
 
-            if (action === "inspect-docs") {
-                openDocModal(booking);
+            if (action === "inspect-user-kyc") {
+                const user = allKycUsers.find(u => u.id === id);
+                if (user) openDocModal({ type: "user", data: user });
+            } else if (action === "inspect-docs") {
+                const booking = allBookings.find(b => b.id === id);
+                if (booking) openDocModal({ type: "booking", data: booking });
             } else if (action === "confirm-payment") {
-                confirmAdvancePayment(booking);
+                const booking = allBookings.find(b => b.id === id);
+                if (booking) confirmAdvancePayment(booking);
             } else if (action === "reject-payment") {
-                rejectAdvancePayment(booking);
+                const booking = allBookings.find(b => b.id === id);
+                if (booking) rejectAdvancePayment(booking);
             }
         });
     });
+}
+
+// Render User KYC Card
+function renderUserKycCard(u) {
+    let ageStr = "N/A";
+    if (u.dob) {
+        const birth = new Date(u.dob);
+        const today = new Date();
+        let age = today.getFullYear() - birth.getFullYear();
+        const m = today.getMonth() - birth.getMonth();
+        if (m < 0 || (m === 0 && today.getDate() < birth.getDate())) age--;
+        ageStr = `${age} yrs (${age >= 18 ? '✓ 18+' : '⚠️ Minor'})`;
+    }
+
+    return `
+        <div style="border: 1px solid #bfdbfe; border-radius: 10px; padding: 18px; background: #f8fafc; box-shadow: var(--shadow-sm); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 14px;">
+            <div>
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <span style="font-size: 1.15rem;">👤</span>
+                    <strong style="font-size: 1.05rem; color: #0f172a;">${escapeHTML(u.name || "Customer")}</strong>
+                    <span style="background: #fef3c7; color: #92400e; padding: 2px 8px; border-radius: 12px; font-size: 0.76rem; font-weight: 700;">
+                        Pending KYC Review
+                    </span>
+                </div>
+                <div style="display: flex; flex-wrap: wrap; gap: 14px; margin-top: 8px; font-size: 0.85rem; color: #475569;">
+                    <span>Email: <strong>${escapeHTML(u.email || "N/A")}</strong></span>
+                    <span>Phone: <strong>${escapeHTML(u.phone || "N/A")}</strong></span>
+                    <span>DOB / Age: <strong>${escapeHTML(u.dob || "N/A")} (${ageStr})</strong></span>
+                    <span>ID Proof: <strong>${escapeHTML(u.id_type || "Aadhaar Card")}</strong></span>
+                </div>
+            </div>
+            <div>
+                <button class="primary-btn" data-action="inspect-user-kyc" data-id="${escapeHTML(u.id)}" style="padding: 8px 18px; font-size: 0.88rem; background: #2563eb;">
+                    🔍 Review KYC Documents &amp; Approve/Reject
+                </button>
+            </div>
+        </div>
+    `;
 }
 
 // Render individual booking card
@@ -228,39 +357,88 @@ function renderBookingCard(b) {
 }
 
 // Open Document Inspection Modal
-function openDocModal(booking) {
-    activeModalBooking = booking;
+function openDocModal(target) {
+    activeModalItem = target;
     const modalCustomerInfo = document.getElementById("modalCustomerInfo");
     const modalIdLabel = document.getElementById("modalIdLabel");
     const modalIdImage = document.getElementById("modalIdImage");
     const modalDlImage = document.getElementById("modalDlImage");
 
-    modalCustomerInfo.innerHTML = `
-        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 10px;">
-            <div><strong>Customer Name:</strong> ${escapeHTML(booking.customerName)}</div>
-            <div><strong>Email:</strong> ${escapeHTML(booking.customerEmail)}</div>
-            <div><strong>Phone:</strong> ${escapeHTML(booking.customerPhone || "N/A")}</div>
-            <div><strong>Vehicle:</strong> ${escapeHTML(booking.model)} (${escapeHTML(booking.vehicle_number)})</div>
-            <div><strong>Dates:</strong> ${escapeHTML(booking.start_date)} to ${escapeHTML(booking.end_date)}</div>
-            <div><strong>Advance to Pay:</strong> ₹${Number(booking.advance_amount || 0).toLocaleString("en-IN")}</div>
-        </div>
-    `;
+    if (target.type === "user") {
+        const u = target.data;
+        let ageStr = "N/A";
+        if (u.dob) {
+            const birth = new Date(u.dob);
+            const today = new Date();
+            let age = today.getFullYear() - birth.getFullYear();
+            const m = today.getMonth() - birth.getMonth();
+            if (m < 0 || (m === 0 && today.getDate() < birth.getDate())) age--;
+            ageStr = `${age} yrs (${age >= 18 ? '✓ Age 18+ Verified' : '⚠️ Minor <18'})`;
+        }
 
-    modalIdLabel.textContent = `${booking.id_type || "Identity Proof"} Document:`;
+        modalCustomerInfo.innerHTML = `
+            <div style="background: #eff6ff; border: 1px solid #bfdbfe; padding: 10px 14px; border-radius: 6px; margin-bottom: 12px; font-size: 0.88rem; color: #1e40af;">
+                <strong>🪪 Customer Account Verification (KYC):</strong> Approving will unlock vehicle reservations and date selection for this customer.
+            </div>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 10px;">
+                <div><strong>Customer Name:</strong> ${escapeHTML(u.name || "Customer")}</div>
+                <div><strong>Email:</strong> ${escapeHTML(u.email || "N/A")}</div>
+                <div><strong>Phone:</strong> ${escapeHTML(u.phone || "N/A")}</div>
+                <div><strong>Date of Birth:</strong> ${escapeHTML(u.dob || "N/A")} (${ageStr})</div>
+                <div><strong>ID Proof Type:</strong> ${escapeHTML(u.id_type || "Aadhaar Card")}</div>
+                <div><strong>Account UID:</strong> <code>${escapeHTML(u.id)}</code></div>
+            </div>
+            <div style="margin-top: 10px; padding-top: 8px; border-top: 1px dashed #cbd5e1; font-size: 0.8rem; color: #64748b;">
+                <strong>Admin Checklist:</strong> Verify age 18+ from DOB, inspect photograph clarity, and ensure Driving Licence has valid non-expired LMV/Motorcycle endorsements.
+            </div>
+        `;
 
-    if (booking.id_document) {
-        modalIdImage.src = booking.id_document;
-        modalIdImage.style.display = "block";
+        modalIdLabel.textContent = `${u.id_type || "Identity Proof"} Document:`;
+
+        if (u.id_document) {
+            modalIdImage.src = u.id_document;
+            modalIdImage.style.display = "block";
+        } else {
+            modalIdImage.style.display = "none";
+            modalIdLabel.textContent += " (No document uploaded)";
+        }
+
+        if (u.dl_document) {
+            modalDlImage.src = u.dl_document;
+            modalDlImage.style.display = "block";
+        } else {
+            modalDlImage.style.display = "none";
+        }
+
     } else {
-        modalIdImage.style.display = "none";
-        modalIdLabel.textContent += " (No document uploaded)";
-    }
+        const booking = target.data;
+        modalCustomerInfo.innerHTML = `
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 10px;">
+                <div><strong>Customer Name:</strong> ${escapeHTML(booking.customerName)}</div>
+                <div><strong>Email:</strong> ${escapeHTML(booking.customerEmail)}</div>
+                <div><strong>Phone:</strong> ${escapeHTML(booking.customerPhone || "N/A")}</div>
+                <div><strong>Vehicle:</strong> ${escapeHTML(booking.model)} (${escapeHTML(booking.vehicle_number)})</div>
+                <div><strong>Dates:</strong> ${escapeHTML(booking.start_date)} to ${escapeHTML(booking.end_date)}</div>
+                <div><strong>25% Advance:</strong> ₹${Number(booking.advance_amount || 0).toLocaleString("en-IN")}</div>
+            </div>
+        `;
 
-    if (booking.dl_document) {
-        modalDlImage.src = booking.dl_document;
-        modalDlImage.style.display = "block";
-    } else {
-        modalDlImage.style.display = "none";
+        modalIdLabel.textContent = `${booking.id_type || "Identity Proof"} Document:`;
+
+        if (booking.id_document) {
+            modalIdImage.src = booking.id_document;
+            modalIdImage.style.display = "block";
+        } else {
+            modalIdImage.style.display = "none";
+            modalIdLabel.textContent += " (No document uploaded)";
+        }
+
+        if (booking.dl_document) {
+            modalDlImage.src = booking.dl_document;
+            modalDlImage.style.display = "block";
+        } else {
+            modalDlImage.style.display = "none";
+        }
     }
 
     rejectionReasonBox.style.display = "none";
@@ -273,7 +451,7 @@ function openDocModal(booking) {
 // Close Modal
 function closeDocModal() {
     docReviewModal.style.display = "none";
-    activeModalBooking = null;
+    activeModalItem = null;
 }
 
 if (closeModalBtn) closeModalBtn.addEventListener("click", closeDocModal);
@@ -281,34 +459,66 @@ if (closeModalBtn) closeModalBtn.addEventListener("click", closeDocModal);
 // Modal Approve Button
 if (modalApproveBtn) {
     modalApproveBtn.addEventListener("click", async function () {
-        if (!activeModalBooking) return;
-        const b = activeModalBooking;
+        if (!activeModalItem) return;
 
         modalApproveBtn.disabled = true;
         modalApproveBtn.textContent = "Approving...";
 
         try {
-            await db.collection("bookings").doc(b.id).update({
-                verification_status: "Approved",
-                status: "Awaiting Advance",
-                reviewed_by: currentAdmin.uid,
-                reviewed_at: firebase.firestore.FieldValue.serverTimestamp(),
-                updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-            });
+            if (activeModalItem.type === "user") {
+                const u = activeModalItem.data;
+                await db.collection("users").doc(u.id).update({
+                    kyc_status: "Approved",
+                    kyc_reviewed_by: currentAdmin.uid,
+                    kyc_reviewed_at: firebase.firestore.FieldValue.serverTimestamp(),
+                    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                });
 
-            // Notify customer in-app
-            if (b.userId) {
-                await db.collection("users").doc(b.userId).collection("notifications").add({
-                    title: "Documents Approved!",
-                    message: `Your identity documents for ${b.model} have been approved. Please pay the 25% advance (₹${Number(b.advance_amount || 0).toLocaleString("en-IN")}) to lock your reservation.`,
-                    type: "approval",
-                    bookingId: b.id,
+                // Also update any pending bookings for this customer
+                const pendingCustBookings = allBookings.filter(b => b.userId === u.id && (b.verification_status === "Pending Review" || b.status === "Pending Review"));
+                for (const b of pendingCustBookings) {
+                    await db.collection("bookings").doc(b.id).update({
+                        verification_status: "Approved",
+                        status: "Awaiting Advance",
+                        reviewed_by: currentAdmin.uid,
+                        reviewed_at: firebase.firestore.FieldValue.serverTimestamp()
+                    }).catch(console.warn);
+                }
+
+                await db.collection("users").doc(u.id).collection("notifications").add({
+                    title: "Driver Identity Verified & Approved!",
+                    message: "Both your identity proof and Driving Licence have been approved by K3L Admin. You can now reserve vehicles and pick rental dates.",
+                    type: "kyc_approval",
                     read: false,
                     createdAt: firebase.firestore.FieldValue.serverTimestamp()
                 }).catch(console.warn);
+
+                showBannerMsg(`✓ Driver KYC for ${escapeHTML(u.name || u.email)} approved! Customer can now reserve vehicles.`, "success");
+
+            } else {
+                const b = activeModalItem.data;
+                await db.collection("bookings").doc(b.id).update({
+                    verification_status: "Approved",
+                    status: "Awaiting Advance",
+                    reviewed_by: currentAdmin.uid,
+                    reviewed_at: firebase.firestore.FieldValue.serverTimestamp(),
+                    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                });
+
+                if (b.userId) {
+                    await db.collection("users").doc(b.userId).collection("notifications").add({
+                        title: "Documents Approved!",
+                        message: `Your identity documents for ${b.model} have been approved. Please pay the 25% advance (₹${Number(b.advance_amount || 0).toLocaleString("en-IN")}) to lock your reservation.`,
+                        type: "approval",
+                        bookingId: b.id,
+                        read: false,
+                        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                    }).catch(console.warn);
+                }
+
+                showBannerMsg(`✓ Documents for booking ${b.id.substring(0, 8)}... approved successfully. Customer notified to pay 25% advance.`, "success");
             }
 
-            showBannerMsg(`✓ Documents for booking ${b.id.substring(0, 8)}... approved successfully. Customer notified to pay 25% advance.`, "success");
             closeDocModal();
             await loadVerificationBookings();
 
@@ -341,8 +551,7 @@ if (cancelRejectBtn) {
 // Confirm Rejection Button
 if (confirmRejectBtn) {
     confirmRejectBtn.addEventListener("click", async function () {
-        if (!activeModalBooking) return;
-        const b = activeModalBooking;
+        if (!activeModalItem) return;
         const reason = rejectionReasonInput.value.trim();
 
         if (!reason) {
@@ -354,28 +563,51 @@ if (confirmRejectBtn) {
         confirmRejectBtn.textContent = "Rejecting...";
 
         try {
-            await db.collection("bookings").doc(b.id).update({
-                verification_status: "Rejected",
-                rejection_reason: reason,
-                status: "Rejected",
-                reviewed_by: currentAdmin.uid,
-                reviewed_at: firebase.firestore.FieldValue.serverTimestamp(),
-                updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-            });
+            if (activeModalItem.type === "user") {
+                const u = activeModalItem.data;
+                await db.collection("users").doc(u.id).update({
+                    kyc_status: "Rejected",
+                    kyc_rejection_reason: reason,
+                    kyc_reviewed_by: currentAdmin.uid,
+                    kyc_reviewed_at: firebase.firestore.FieldValue.serverTimestamp(),
+                    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                });
 
-            // Notify customer in-app
-            if (b.userId) {
-                await db.collection("users").doc(b.userId).collection("notifications").add({
-                    title: "Documents Verification Required Correction",
-                    message: `Your document submission for ${b.model} was not approved: "${reason}". Please resubmit corrected documents from My Bookings.`,
-                    type: "rejection",
-                    bookingId: b.id,
+                await db.collection("users").doc(u.id).collection("notifications").add({
+                    title: "KYC Documents Not Approved",
+                    message: `Your submitted documents were not approved: "${reason}". Please visit the ID Verification (KYC) page to correct and resubmit.`,
+                    type: "kyc_rejection",
                     read: false,
                     createdAt: firebase.firestore.FieldValue.serverTimestamp()
                 }).catch(console.warn);
+
+                showBannerMsg(`User KYC for ${escapeHTML(u.name || u.email)} rejected: "${reason}".`, "error");
+
+            } else {
+                const b = activeModalItem.data;
+                await db.collection("bookings").doc(b.id).update({
+                    verification_status: "Rejected",
+                    rejection_reason: reason,
+                    status: "Rejected",
+                    reviewed_by: currentAdmin.uid,
+                    reviewed_at: firebase.firestore.FieldValue.serverTimestamp(),
+                    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                });
+
+                if (b.userId) {
+                    await db.collection("users").doc(b.userId).collection("notifications").add({
+                        title: "Documents Verification Required Correction",
+                        message: `Your document submission for ${b.model} was not approved: "${reason}". Please resubmit corrected documents from My Bookings.`,
+                        type: "rejection",
+                        bookingId: b.id,
+                        read: false,
+                        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                    }).catch(console.warn);
+                }
+
+                showBannerMsg(`Booking ${b.id.substring(0, 8)}... rejected with reason: "${reason}".`, "error");
             }
 
-            showBannerMsg(`Booking ${b.id.substring(0, 8)}... rejected with reason: "${reason}".`, "error");
             closeDocModal();
             await loadVerificationBookings();
 
@@ -391,7 +623,8 @@ if (confirmRejectBtn) {
 
 // Confirm Advance Payment (Mark as Paid & Confirmed)
 async function confirmAdvancePayment(booking) {
-    const confirmed = confirm(`Confirm receipt of 25% advance (₹${Number(booking.advance_amount || 0).toLocaleString("en-IN")}) for booking ${booking.id.substring(0, 8)}...? This will lock the vehicle schedule.`);
+    const advanceStr = Number(booking.advance_amount || 0).toLocaleString("en-IN");
+    const confirmed = confirm(`UPI Payment Verification Protocol:\n\nDid you verify receipt of ₹${advanceStr} in your UPI / Bank app for receiving UPI ID 9486886986@ybl (Ms Krishma Priya S) matching customer UTR "${booking.utr_number || 'N/A'}"?\n\nClick OK to confirm advance payment and lock the vehicle schedule.`);
     if (!confirmed) return;
 
     try {
